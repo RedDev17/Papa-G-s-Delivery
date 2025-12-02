@@ -166,7 +166,7 @@ ${formData.special_instructions ? `📝 Special Instructions: ${formData.special
 Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
 
       const encodedMessage = encodeURIComponent(message);
-      const messengerUrl = `https://m.me/375641885639863?text=${encodedMessage}`;
+      const messengerUrl = `https://m.me/856261030909952?text=${encodedMessage}`;
       
       window.open(messengerUrl, '_blank');
       
