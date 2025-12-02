@@ -394,11 +394,20 @@ const RestaurantManager: React.FC<RestaurantManagerProps> = ({ onBack }) => {
                   </div>
                 )}
                 <div className="absolute top-4 right-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    restaurant.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateRestaurant(restaurant.id, { active: !restaurant.active });
+                    }}
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors duration-200 ${
+                      restaurant.active 
+                        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                    }`}
+                    title="Click to toggle availability"
+                  >
                     {restaurant.active ? 'Active' : 'Inactive'}
-                  </span>
+                  </button>
                 </div>
               </div>
               <div className="p-6">
