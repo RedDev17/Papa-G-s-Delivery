@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Leaflet Map Styles */
+@import 'leaflet/dist/leaflet.css';
+
+/* Papa G's Delivery Custom Styles */
+/* Red to Yellow gradient theme matching scooter design */
+.bg-delivery-cream { background-color: #FAFAF9; }
+.bg-delivery-beige { background-color: #F7F7F7; }
+.text-delivery-red { color: #EF4444; }
+.text-delivery-dark { color: #0B0A0A; }
+.border-delivery-light { border-color: #E5E5E5; }
+.ring-delivery-primary { --tw-ring-color: #EF4444; }
+
+/* Hide scrollbar for mobile nav */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Image loading optimization */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Preload critical images */
+.preload-image {
+  content: '';
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
