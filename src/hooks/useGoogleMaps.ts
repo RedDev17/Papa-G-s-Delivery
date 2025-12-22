@@ -4,8 +4,8 @@ import { supabase } from '../lib/supabase';
 // Delivery center: Floridablanca, Pampanga
 // This is the point from which delivery distance is calculated
 const DELIVERY_CENTER = {
-  lat: 14.967660129277315, 
-  lng: 120.50763047621417, 
+  lat: 14.9849683, 
+  lng: 120.5023, 
   address: 'Floridablanca, Pampanga'
 };
 
@@ -65,9 +65,10 @@ export const useGoogleMaps = () => {
     lng: DELIVERY_CENTER.lng
   });
   
-  const [deliverySettings, setDeliverySettings] = useState<{ baseFee: number; perKmFee: number }>({
+  const [deliverySettings, setDeliverySettings] = useState<{ baseFee: number; perKmFee: number; baseDistance: number }>({
     baseFee: 60,
-    perKmFee: 13
+    perKmFee: 13,
+    baseDistance: 3
   });
 
   // Fetch delivery settings from database
@@ -77,19 +78,20 @@ export const useGoogleMaps = () => {
         const { data, error } = await supabase
           .from('site_settings')
           .select('*')
-          .in('id', ['delivery_base_fee', 'delivery_per_km_fee']);
+          .in('id', ['delivery_base_fee', 'delivery_per_km_fee', 'delivery_base_distance']);
 
         if (error) throw error;
 
         if (data) {
           const settings: any = {};
-          data.forEach(item => {
+          data.forEach((item: any) => {
             settings[item.id] = parseFloat(item.value);
           });
           
           setDeliverySettings({
             baseFee: settings.delivery_base_fee || 60,
-            perKmFee: settings.delivery_per_km_fee || 13
+            perKmFee: settings.delivery_per_km_fee || 13,
+            baseDistance: settings.delivery_base_distance || 0
           });
         }
       } catch (err) {
@@ -125,11 +127,13 @@ export const useGoogleMaps = () => {
       const normalizedAddress = normalizePhilippineAddress(normalizePlusCodeAddress(address));
       
       // Try multiple address variations for better geocoding success
+      // Try multiple address variations for better geocoding success
+      // Prioritize most specific location (with Floridablanca/Pampanga)
       const addressVariations = [
-        normalizedAddress, // Original normalized
-        normalizedAddress.includes('Floridablanca') ? normalizedAddress : `${normalizedAddress}, Floridablanca`, // Add Floridablanca if missing
-        normalizedAddress.includes('Pampanga') ? normalizedAddress : `${normalizedAddress}, Pampanga`, // Add Pampanga if missing
-        `${normalizedAddress}, Floridablanca, Pampanga, Philippines`, // Full format
+        `${normalizedAddress}, Floridablanca, Pampanga, Philippines`, // Most specific first
+        normalizedAddress.includes('Floridablanca') ? normalizedAddress : `${normalizedAddress}, Floridablanca`,
+        normalizedAddress.includes('Pampanga') ? normalizedAddress : `${normalizedAddress}, Pampanga`,
+        normalizedAddress, // Original as fallback
       ];
       
       // Remove duplicates
@@ -143,8 +147,12 @@ export const useGoogleMaps = () => {
           ? fullAddress 
           : `${fullAddress}, Pampanga, Philippines`;
       
+      // Use viewbox to bias results towards Floridablanca/Pampanga area
+      // Box: left,top,right,bottom (approx coordinates for Pampanga)
+      const viewbox = '120.30,15.20,120.70,14.80';
+      
       const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchAddress)}&limit=1&countrycodes=ph`,
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchAddress)}&limit=1&countrycodes=ph&viewbox=${viewbox}&bounded=1`,
         {
           headers: {
             'User-Agent': 'E-Run-Delivery-App' // Required by Nominatim
@@ -271,6 +279,37 @@ export const useGoogleMaps = () => {
     return null;
   };
 
+  // Calculate distance using OSRM (Open Source Routing Machine) - Free and accurate road distance
+  const calculateDistanceOSRM = async (origin: { lat: number; lng: number }, destination: { lat: number; lng: number }): Promise<DistanceResult | null> => {
+    try {
+      // OSRM expects coordinates in "lng,lat" format
+      // Use 'driving' profile for car/motorcycle routes
+      const response = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=false&steps=false`
+      );
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      
+      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const distanceInKm = route.distance / 1000; // Convert meters to kilometers
+        const durationInSeconds = route.duration;
+        const durationInMinutes = Math.round(durationInSeconds / 60);
+        
+        return {
+          distance: Math.round(distanceInKm * 10) / 10, // Round to 1 decimal place
+          duration: `${durationInMinutes} mins`
+        };
+      }
+      return null;
+    } catch (err) {
+      console.warn('OSRM calculation error:', err);
+      return null;
+    }
+  };
+
   // Main distance calculation function - calculates from delivery center (or provided origin) to customer address
   const calculateDistance = useCallback(async (destinationAddress: string, origin?: { lat: number; lng: number }): Promise<DistanceResult | null> => {
     setLoading(true);
@@ -299,7 +338,15 @@ export const useGoogleMaps = () => {
       }
 
       if (coords) {
-        // Calculate distance from origin to customer address
+        // Try OSRM first for accurate road distance
+        const osrmResult = await calculateDistanceOSRM(startCoords, coords);
+        
+        if (osrmResult) {
+          setLoading(false);
+          return osrmResult;
+        }
+
+        // Fallback to Haversine if OSRM fails
         const distance = calculateDistanceHaversine(
           startCoords.lat,
           startCoords.lng,
@@ -405,8 +452,12 @@ export const useGoogleMaps = () => {
       return deliverySettings.baseFee; // Base fee if distance cannot be calculated
     }
 
-    // Calculate total: base fee + (distance * per km fee)
-    return deliverySettings.baseFee + (distance * deliverySettings.perKmFee);
+    // Calculate total: base fee + ((distance - baseDistance) * per km fee)
+    // If distance is within base distance, only base fee applies
+    // Only charge for every FULL kilometer added (step pricing)
+    const chargeableDistance = Math.max(0, distance - deliverySettings.baseDistance);
+    const chargeableFullKm = Math.floor(chargeableDistance);
+    return deliverySettings.baseFee + (chargeableFullKm * deliverySettings.perKmFee);
   }, [deliverySettings]);
 
   // Check if customer address is within delivery area (distance from restaurant)

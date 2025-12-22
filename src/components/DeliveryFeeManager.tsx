@@ -5,12 +5,14 @@ import { supabase } from '../lib/supabase';
 interface DeliverySettings {
   delivery_base_fee: number;
   delivery_per_km_fee: number;
+  delivery_base_distance: number;
 }
 
 const DeliveryFeeManager: React.FC = () => {
   const [settings, setSettings] = useState<DeliverySettings>({
     delivery_base_fee: 60,
-    delivery_per_km_fee: 13
+    delivery_per_km_fee: 13,
+    delivery_base_distance: 3
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -26,7 +28,7 @@ const DeliveryFeeManager: React.FC = () => {
       const { data, error } = await supabase
         .from('site_settings')
         .select('*')
-        .in('id', ['delivery_base_fee', 'delivery_per_km_fee']);
+        .in('id', ['delivery_base_fee', 'delivery_per_km_fee', 'delivery_base_distance']);
 
       if (error) throw error;
 
@@ -61,14 +63,23 @@ const DeliveryFeeManager: React.FC = () => {
     try {
       const updates = [
         { id: 'delivery_base_fee', value: settings.delivery_base_fee.toString() },
-        { id: 'delivery_per_km_fee', value: settings.delivery_per_km_fee.toString() }
+        { id: 'delivery_per_km_fee', value: settings.delivery_per_km_fee.toString() },
+        { id: 'delivery_base_distance', value: settings.delivery_base_distance.toString() }
       ];
 
       for (const update of updates) {
         const { error } = await supabase
           .from('site_settings')
-          .update({ value: update.value })
-          .eq('id', update.id);
+          .upsert({ 
+            id: update.id,
+            value: update.value,
+            type: 'number',
+            description: update.id === 'delivery_base_distance' 
+              ? 'Base distance included in base fee (km)' 
+              : update.id === 'delivery_base_fee' 
+                ? 'Base delivery fee in Pesos' 
+                : 'Delivery fee per kilometer in Pesos'
+          });
 
         if (error) throw error;
       }
@@ -155,7 +166,27 @@ const DeliveryFeeManager: React.FC = () => {
               />
             </div>
             <p className="mt-1 text-xs text-gray-500">
-              Additional fee charged for each kilometer of distance.
+              Additional fee charged for each <b>full</b> kilometer of distance beyond the base distance.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Base Distance (km)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                name="delivery_base_distance"
+                value={settings.delivery_base_distance}
+                onChange={handleChange}
+                min="0"
+                step="0.1"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+              />
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Distance included in the base fee. Extra fee applies only after this distance.
             </p>
           </div>
         </div>

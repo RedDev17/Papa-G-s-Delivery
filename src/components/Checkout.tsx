@@ -24,9 +24,11 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
   const currentRestaurant = restaurants.find(r => r.id === currentRestaurantId);
   
   // Use restaurant location if available, otherwise default
-  const restaurantLocation = currentRestaurant?.latitude && currentRestaurant?.longitude
-    ? { lat: currentRestaurant.latitude, lng: currentRestaurant.longitude }
-    : defaultRestaurantLocation;
+  const restaurantLocation = React.useMemo(() => {
+    return currentRestaurant?.latitude && currentRestaurant?.longitude
+      ? { lat: currentRestaurant.latitude, lng: currentRestaurant.longitude }
+      : defaultRestaurantLocation;
+  }, [currentRestaurant, defaultRestaurantLocation]);
 
   const [step, setStep] = useState<'details' | 'payment'>('details');
   const [customerName, setCustomerName] = useState('');
@@ -44,6 +46,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
   // Delivery area validation
   const [isWithinArea, setIsWithinArea] = useState<boolean | null>(null);
   const [areaCheckError, setAreaCheckError] = useState<string | null>(null);
+  const [debouncedAddress, setDebouncedAddress] = useState('');
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -106,13 +109,15 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
   };
 
   // Handle location selection from map
-  const handleLocationSelect = async (lat: number, lng: number) => {
+  const handleLocationSelect = React.useCallback(async (lat: number, lng: number) => {
     setCustomerLocation({ lat, lng });
     
     // Get address from coordinates
     const newAddress = await reverseGeocode(lat, lng);
     if (newAddress) {
       setAddress(newAddress);
+      // Update debounced address immediately when selecting from map
+      setDebouncedAddress(newAddress);
       
       // Trigger distance calculation
       setIsCalculatingDistance(true);
@@ -128,12 +133,13 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
       }
       setIsCalculatingDistance(false);
     }
-  };
+  }, [reverseGeocode, calculateDistance, calculateDeliveryFee, restaurantLocation]);
 
   // Calculate distance and delivery fee when address changes
   React.useEffect(() => {
     if (address.trim()) {
       const timeoutId = setTimeout(async () => {
+        setDebouncedAddress(address);
         setIsCalculatingDistance(true);
         setAreaCheckError(null);
         
@@ -449,7 +455,7 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                       restaurantLocation={restaurantLocation}
                       customerLocation={customerLocation}
                       distance={distance}
-                      address={address}
+                      address={debouncedAddress}
                       onLocationSelect={handleLocationSelect}
                       restaurantName={currentRestaurant?.name}
                       restaurantAddress={currentRestaurant?.deliveryTime ? `Delivery Time: ${currentRestaurant.deliveryTime}` : undefined}

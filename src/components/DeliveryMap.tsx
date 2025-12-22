@@ -233,5 +233,5 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
   );
 };
 
-export default DeliveryMap;
+export default React.memo(DeliveryMap);
 
