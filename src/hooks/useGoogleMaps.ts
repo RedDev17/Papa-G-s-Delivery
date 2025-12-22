@@ -419,6 +419,15 @@ export const useGoogleMaps = () => {
         }
 
         if (pickupCoords && dropoffCoords) {
+          // Try OSRM first for accurate road distance
+          const osrmResult = await calculateDistanceOSRM(pickupCoords, dropoffCoords);
+          
+          if (osrmResult) {
+            setLoading(false);
+            return osrmResult;
+          }
+
+          // Fallback to Haversine if OSRM fails
           const distance = calculateDistanceHaversine(
             pickupCoords.lat,
             pickupCoords.lng,
