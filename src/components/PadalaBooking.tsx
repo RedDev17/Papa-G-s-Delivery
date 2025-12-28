@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowLeft, MapPin, X, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Plus, Trash2, Navigation } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useGoogleMaps } from '../hooks/useGoogleMaps';
+import { useOpenStreetMap } from '../hooks/useOpenStreetMap';
+import AddressAutocomplete from './AddressAutocomplete';
 import Header from './Header';
-import LocationPicker from './LocationPicker';
+
+import DeliveryMap from './DeliveryMap';
 
 interface PadalaBookingProps {
   onBack: () => void;
@@ -17,7 +20,8 @@ interface PabiliItem {
 }
 
 const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala', mode = 'full' }) => {
-  const { calculateDistanceBetweenAddresses, calculateDeliveryFee } = useGoogleMaps();
+  const { calculateDistanceBetweenAddresses, calculateDeliveryFee, restaurantLocation, deliverySettings } = useGoogleMaps();
+  const { reverseGeocode } = useOpenStreetMap();
   const [formData, setFormData] = useState({
     customer_name: '',
     contact_number: '',
@@ -38,32 +42,62 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
   // State for Pabili items list
   const [pabiliItems, setPabiliItems] = useState<PabiliItem[]>([{ name: '', qty: '' }]);
 
+  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+
+
   const [distance, setDistance] = useState<number | null>(null);
+  const [leg1Distance, setLeg1Distance] = useState<number | null>(null);
+  const [leg2Distance, setLeg2Distance] = useState<number | null>(null);
   const [deliveryFee, setDeliveryFee] = useState<number>(60);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showMapModal, setShowMapModal] = useState(false);
-  const [activeAddressField, setActiveAddressField] = useState<'pickup' | 'delivery' | null>(null);
 
-  const handleOpenMap = (field: 'pickup' | 'delivery') => {
-    setActiveAddressField(field);
-    setShowMapModal(true);
-  };
+  const [debouncedPickupAddress, setDebouncedPickupAddress] = useState('');
+  const [debouncedDeliveryAddress, setDebouncedDeliveryAddress] = useState('');
 
-  const handleLocationSelect = (address: string, lat: number, lng: number) => {
-    if (activeAddressField) {
-      const fieldName = activeAddressField === 'pickup' ? 'pickup_address' : 'delivery_address';
-      setFormData(prev => ({ ...prev, [fieldName]: address }));
-      
-      // If we're setting delivery address, trigger fee calculation
-      if (activeAddressField === 'delivery') {
-        // We need to wait for state update or pass values directly
-        // For simplicity, we'll just let the user blur or we can trigger it manually if we had the other address
-      }
+  // Debounce address changes
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPickupAddress(formData.pickup_address);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [formData.pickup_address]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedDeliveryAddress(formData.delivery_address);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [formData.delivery_address]);
+
+  // Trigger calculation when debounced addresses change
+  React.useEffect(() => {
+    if (debouncedPickupAddress || debouncedDeliveryAddress) {
+      calculateFee();
     }
-    setShowMapModal(false);
-    setActiveAddressField(null);
+  }, [debouncedPickupAddress, debouncedDeliveryAddress]);
+
+
+
+  const handlePickupLocationDrag = async (lat: number, lng: number) => {
+    setPickupCoords({ lat, lng });
+    const address = await reverseGeocode(lat, lng);
+    if (address) {
+      setFormData(prev => ({ ...prev, pickup_address: address }));
+    }
   };
+
+  const handleDeliveryLocationDrag = async (lat: number, lng: number) => {
+    setDeliveryCoords({ lat, lng });
+    const address = await reverseGeocode(lat, lng);
+    if (address) {
+      setFormData(prev => ({ ...prev, delivery_address: address }));
+    }
+  };
+
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -95,20 +129,34 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
     }
 
     // For Pabili, we use the pickup address (Store Location) if provided
-    const pickup = formData.pickup_address || 'Tagbilaran City';
+    // For Padala, we use the pickup address
+    const pickup = formData.pickup_address || (restaurantLocation?.address || 'Floridablanca, Pampanga');
+    const center = restaurantLocation?.address || 'Floridablanca, Pampanga';
 
     setIsCalculating(true);
     try {
-      // Calculate distance from pickup to delivery (not from delivery center)
-      const result = await calculateDistanceBetweenAddresses(
-        pickup,
-        formData.delivery_address
-      );
+      // We only charge for the distance between Pickup/Store and Customer
+      // The Hub -> Pickup distance is internal logistics and shouldn't be charged to the customer
+      
+      // Calculate Pickup/Store -> Customer Delivery
+      const result = await calculateDistanceBetweenAddresses(pickup, formData.delivery_address);
 
       if (result && !isNaN(result.distance)) {
         setDistance(result.distance);
+        setLeg1Distance(null); // No longer displaying Hub -> Store
+        setLeg2Distance(null); // No longer displaying breakdown
+        
         const fee = calculateDeliveryFee(result.distance);
         setDeliveryFee(fee);
+
+        // Update map coordinates if available
+        if (result.pickupCoordinates) {
+            setPickupCoords(result.pickupCoordinates);
+        }
+        if (result.dropoffCoordinates) {
+            setDeliveryCoords(result.dropoffCoordinates);
+        }
+
       } else {
         setDistance(null);
         setDeliveryFee(60);
@@ -121,6 +169,7 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
       setIsCalculating(false);
     }
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -378,33 +427,19 @@ Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
             </h2>
             <div className="space-y-4">
               {/* Delivery Address (Map Location for Receiver) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {title === 'Pabili' ? 'Map Location (Receiver) *' : 'Delivery Address *'}
-                </label>
-                <div className="relative">
-                  <textarea
-                    name="delivery_address"
-                    value={formData.delivery_address}
-                    onChange={handleInputChange}
-                    onBlur={calculateFee}
-                    required
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent pr-10"
-                    placeholder="Enter complete address or pin location on map"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleOpenMap('delivery')}
-                    className="absolute right-2 top-2 text-gray-400 hover:text-delivery-primary p-1"
-                    title="Pin on Map"
-                  >
-                    <MapPin className="h-5 w-5" />
-                  </button>
-                </div>
-                {isCalculating && (
-                  <p className="text-xs text-gray-500 mt-1">Calculating distance...</p>
-                )}
+              <div className="relative">
+                <AddressAutocomplete
+                  label={title === 'Pabili' ? 'Map Location (Receiver) *' : 'Delivery Address *'}
+                  value={formData.delivery_address}
+                  onChange={(value) => setFormData(prev => ({ ...prev, delivery_address: value }))}
+                  onSelect={(address, lat, lng) => {
+                    setFormData(prev => ({ ...prev, delivery_address: address }));
+                    setDeliveryCoords({ lat, lng });
+                  }}
+                  required
+                  placeholder="Enter complete address or pin location on map"
+                />
+
               </div>
 
               {/* Store Info for Pabili */}
@@ -424,52 +459,56 @@ Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Map Location (Store) *</label>
-                    <div className="relative">
-                      <textarea
-                        name="pickup_address"
+                  <div className="relative">
+                    <AddressAutocomplete
                         value={formData.pickup_address}
-                        onChange={handleInputChange}
-                        onBlur={calculateFee}
+                        onChange={(value) => setFormData(prev => ({ ...prev, pickup_address: value }))}
+                        onSelect={(address, lat, lng) => {
+                            setFormData(prev => ({ ...prev, pickup_address: address }));
+                            setPickupCoords({ lat, lng });
+                        }}
                         required
-                        rows={3}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent pr-10"
                         placeholder="Enter store address or pin location on map"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleOpenMap('pickup')}
-                        className="absolute right-2 top-2 text-gray-400 hover:text-delivery-primary p-1"
-                        title="Pin on Map"
-                      >
-                        <MapPin className="h-5 w-5" />
-                      </button>
-                    </div>
+                    />
+
+                  </div>
                   </div>
                 </>
               )}
 
               {/* Standard Pickup Address for Padala */}
               {title !== 'Pabili' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Pickup Address *</label>
-                  <div className="relative">
-                    <textarea
-                      name="pickup_address"
-                      value={formData.pickup_address}
-                      onChange={handleInputChange}
-                      required
-                      rows={3}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent pr-10"
-                      placeholder="Enter complete pickup address"
+                <div className="relative">
+                  <AddressAutocomplete
+                    label="Pickup Address *"
+                    value={formData.pickup_address}
+                    onChange={(value) => setFormData(prev => ({ ...prev, pickup_address: value }))}
+                    onSelect={(address, lat, lng) => {
+                        setFormData(prev => ({ ...prev, pickup_address: address }));
+                        setPickupCoords({ lat, lng });
+                    }}
+                    required
+                    placeholder="Enter complete pickup address"
+                  />
+
+                </div>
+              )}
+
+              {/* Delivery Map Visualization */}
+              {(pickupCoords || deliveryCoords || restaurantLocation) && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Route Preview</label>
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <DeliveryMap
+                      restaurantLocation={pickupCoords || restaurantLocation}
+                      customerLocation={deliveryCoords || undefined}
+                      distance={distance}
+                      address={formData.delivery_address}
+                      onLocationSelect={handleDeliveryLocationDrag}
+                      onRestaurantSelect={handlePickupLocationDrag}
+                      restaurantName={title === 'Pabili' ? 'Store Location' : 'Pickup Location'}
+                      restaurantAddress={formData.pickup_address}
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleOpenMap('pickup')}
-                      className="absolute right-2 top-2 text-gray-400 hover:text-delivery-primary p-1"
-                      title="Pin on Map"
-                    >
-                      <MapPin className="h-5 w-5" />
-                    </button>
                   </div>
                 </div>
               )}
@@ -630,16 +669,35 @@ Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
 
           {/* Delivery Fee Display */}
           {distance !== null && deliveryFee > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Estimated Distance</p>
-                  <p className="text-lg font-semibold text-gray-900">{distance} km</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Delivery Fee</p>
-                  <p className="text-2xl font-bold text-delivery-primary">₱{deliveryFee.toFixed(2)}</p>
-                </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
+              <h3 className="font-medium text-gray-900">Delivery Summary</h3>
+              
+              {/* Distance Row */}
+              <div className="flex items-start justify-between text-sm">
+                 <span className="text-gray-600 flex items-start gap-2">
+                    <Navigation className="h-4 w-4 mt-0.5" />
+                    <div>
+                        <span className="font-medium">Total Distance</span>
+                    </div>
+                 </span>
+                 <span className="text-gray-900 font-medium">{distance} km</span>
+              </div>
+
+              <div className="border-t border-gray-100"></div>
+
+              {/* Fee Row */}
+              <div className="flex items-start justify-between">
+                <span className="text-gray-600 flex items-start gap-2">
+                  <MapPin className="h-4 w-4 mt-1" />
+                  <div>
+                      <span className="font-medium">Delivery Fee</span>
+                      <div className="text-xs text-gray-500 mt-1 pl-2 border-l-2 border-gray-100 space-y-0.5">
+                        <p>Base Fee: ₱{deliverySettings.baseFee.toFixed(2)}</p>
+                        <p>Distance Fee: ₱{(deliveryFee - deliverySettings.baseFee).toFixed(2)}</p>
+                      </div>
+                  </div>
+                </span>
+                <span className="text-xl font-bold text-delivery-primary">₱{deliveryFee.toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -659,27 +717,7 @@ Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
         </form>
       </div>
 
-      {/* Map Modal */}
-      {showMapModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Pin {activeAddressField === 'pickup' ? 'Store' : 'Delivery'} Location
-              </h3>
-              <button
-                onClick={() => setShowMapModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="p-4">
-              <LocationPicker onLocationSelect={handleLocationSelect} />
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

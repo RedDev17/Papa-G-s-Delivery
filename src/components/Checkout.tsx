@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowLeft, MapPin, Navigation } from 'lucide-react';
+import { ArrowLeft, MapPin } from 'lucide-react';
 import { CartItem, PaymentMethod } from '../types';
 import { usePaymentMethods } from '../hooks/usePaymentMethods';
 import { useGoogleMaps } from '../hooks/useGoogleMaps';
 import { useOpenStreetMap } from '../hooks/useOpenStreetMap';
 import { useRestaurants } from '../hooks/useRestaurants';
 import DeliveryMap from './DeliveryMap';
+import AddressAutocomplete from './AddressAutocomplete';
 
 interface CheckoutProps {
   cartItems: CartItem[];
@@ -42,7 +43,6 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
   const [deliveryFee, setDeliveryFee] = useState<number>(60); // Default base fee
   const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
   const [customerLocation, setCustomerLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
   // Delivery area validation
   const [isWithinArea, setIsWithinArea] = useState<boolean | null>(null);
   const [areaCheckError, setAreaCheckError] = useState<string | null>(null);
@@ -59,54 +59,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
     }
   }, [paymentMethods]);
 
-  // Get customer's current location using browser geolocation
-  const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser. Please enter your address manually.');
-      return;
-    }
 
-    setIsGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setCustomerLocation({ lat: latitude, lng: longitude });
-        
-        // Reverse geocode to get address
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-            {
-              headers: {
-                'User-Agent': 'E-Run-Delivery-App'
-              }
-            }
-          );
-          const data = await response.json();
-          if (data && data.display_name) {
-            setAddress(data.display_name);
-          }
-        } catch (err) {
-          console.error('Reverse geocoding error:', err);
-        }
-        
-        // Calculate distance
-        const distanceResult = await calculateDistance(`${latitude},${longitude}`);
-        if (distanceResult) {
-          setDistance(distanceResult.distance);
-          const fee = calculateDeliveryFee(distanceResult.distance);
-          setDeliveryFee(fee);
-        }
-        
-        setIsGettingLocation(false);
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        alert('Could not get your location. Please enter your address manually.');
-        setIsGettingLocation(false);
-      }
-    );
-  };
 
   // Handle location selection from map
   const handleLocationSelect = React.useCallback(async (lat: number, lng: number) => {
@@ -322,24 +275,43 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-2xl font-noto font-medium text-black mb-6">Order Summary</h2>
             
-            <div className="space-y-4 mb-6">
-              {cartItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between py-2 border-b border-gray-200">
-                  <div>
-                    <h4 className="font-medium text-black">{item.name}</h4>
-                    {item.selectedVariation && (
-                      <p className="text-sm text-gray-600">Size: {item.selectedVariation.name}</p>
-                    )}
-                    {item.selectedAddOns && item.selectedAddOns.length > 0 && (
-                      <p className="text-sm text-gray-600">
-                        Add-ons: {item.selectedAddOns.map(addOn => addOn.name).join(', ')}
-                      </p>
-                    )}
-                    <p className="text-sm text-gray-600">₱{item.totalPrice} x {item.quantity}</p>
+            <div className="space-y-6 mb-6">
+              {Object.entries(cartItems.reduce((acc, item) => {
+                const restId = item.restaurantId || 'unknown';
+                if (!acc[restId]) acc[restId] = [];
+                acc[restId].push(item);
+                return acc;
+              }, {} as { [key: string]: CartItem[] })).map(([restId, items]) => {
+                const restaurantName = restaurants.find(r => r.id === restId)?.name || 'Papa G\'s Delivery';
+                
+                return (
+                  <div key={restId} className="border border-gray-100 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2 border-b border-gray-100 flex items-center gap-2">
+                      <span className="text-lg">🏪</span>
+                      <h3 className="font-medium text-gray-900">{restaurantName}</h3>
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      {items.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-4 bg-white">
+                          <div>
+                            <h4 className="font-medium text-black">{item.name}</h4>
+                            {item.selectedVariation && (
+                              <p className="text-sm text-gray-600">Size: {item.selectedVariation.name}</p>
+                            )}
+                            {item.selectedAddOns && item.selectedAddOns.length > 0 && (
+                              <p className="text-sm text-gray-600">
+                                Add-ons: {item.selectedAddOns.map(addOn => addOn.name).join(', ')}
+                              </p>
+                            )}
+                            <p className="text-sm text-gray-600">₱{item.totalPrice} x {item.quantity}</p>
+                          </div>
+                          <span className="font-semibold text-black">₱{item.totalPrice * item.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <span className="font-semibold text-black">₱{item.totalPrice * item.quantity}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             <div className="border-t border-gray-200 pt-4 space-y-2">
@@ -412,26 +384,19 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                   )}
                 </label>
                 <div className="flex gap-2 mb-2">
-                  <textarea
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className={`flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent transition-all duration-200 ${
-                      isWithinArea === false ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
-                    placeholder="Enter complete address or pin location on map"
-                    rows={3}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={getCurrentLocation}
-                    disabled={isGettingLocation}
-                    className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                    title="Use my current location"
-                  >
-                    <Navigation className={`h-5 w-5 ${isGettingLocation ? 'animate-spin' : ''}`} />
-                    <span className="font-medium whitespace-nowrap text-sm">Locate Me</span>
-                  </button>
+                  <div className="flex-1">
+                    <AddressAutocomplete
+                      value={address}
+                      onChange={(value) => setAddress(value)}
+                      onSelect={(newAddress, lat, lng) => {
+                        setAddress(newAddress);
+                        handleLocationSelect(lat, lng);
+                      }}
+                      placeholder="Enter complete address or pin location on map"
+                      required
+                      className="w-full"
+                    />
+                  </div>
                 </div>
                 {isWithinArea === false && !isCalculatingDistance && (
                   <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -594,27 +559,46 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
               {landmark && <p className="text-sm text-gray-600">Landmark: {landmark}</p>}
             </div>
 
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between py-2 border-b border-gray-200">
-                <div>
-                  <h4 className="font-medium text-black">{item.name}</h4>
-                  {item.selectedVariation && (
-                    <p className="text-sm text-gray-600">Size: {item.selectedVariation.name}</p>
-                  )}
-                  {item.selectedAddOns && item.selectedAddOns.length > 0 && (
-                    <p className="text-sm text-gray-600">
-                      Add-ons: {item.selectedAddOns.map(addOn => 
-                        addOn.quantity && addOn.quantity > 1 
-                          ? `${addOn.name} x${addOn.quantity}`
-                          : addOn.name
-                      ).join(', ')}
-                    </p>
-                  )}
-                  <p className="text-sm text-gray-600">₱{item.totalPrice} x {item.quantity}</p>
+            {Object.entries(cartItems.reduce((acc, item) => {
+              const restId = item.restaurantId || 'unknown';
+              if (!acc[restId]) acc[restId] = [];
+              acc[restId].push(item);
+              return acc;
+            }, {} as { [key: string]: CartItem[] })).map(([restId, items]) => {
+              const restaurantName = restaurants.find(r => r.id === restId)?.name || 'Papa G\'s Delivery';
+              
+              return (
+                <div key={restId} className="border border-gray-100 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-2 border-b border-gray-100 flex items-center gap-2">
+                    <span className="text-lg">🏪</span>
+                    <h3 className="font-medium text-gray-900">{restaurantName}</h3>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {items.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between p-4 bg-white">
+                        <div>
+                          <h4 className="font-medium text-black">{item.name}</h4>
+                          {item.selectedVariation && (
+                            <p className="text-sm text-gray-600">Size: {item.selectedVariation.name}</p>
+                          )}
+                          {item.selectedAddOns && item.selectedAddOns.length > 0 && (
+                            <p className="text-sm text-gray-600">
+                              Add-ons: {item.selectedAddOns.map(addOn => 
+                                addOn.quantity && addOn.quantity > 1 
+                                  ? `${addOn.name} x${addOn.quantity}`
+                                  : addOn.name
+                              ).join(', ')}
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-600">₱{item.totalPrice} x {item.quantity}</p>
+                        </div>
+                        <span className="font-semibold text-black">₱{item.totalPrice * item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <span className="font-semibold text-black">₱{item.totalPrice * item.quantity}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
           
           <div className="border-t border-gray-200 pt-4 mb-6 space-y-2">

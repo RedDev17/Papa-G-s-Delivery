@@ -119,6 +119,38 @@ export const useGoogleMaps = () => {
     return straightLineDistance * 1.2;
   };
 
+  // Search for address suggestions (for autocomplete)
+  const searchAddressOSM = async (query: string): Promise<Array<{ label: string; value: { lat: number; lng: number }; raw: any }>> => {
+    try {
+      if (!query || query.length < 3) return [];
+
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ph&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'E-Run-Delivery-App'
+          }
+        }
+      );
+
+      if (!response.ok) return [];
+
+      const data = await response.json();
+      
+      return data.map((item: any) => ({
+        label: item.display_name,
+        value: {
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon)
+        },
+        raw: item
+      }));
+    } catch (err) {
+      console.error('OSM search error:', err);
+      return [];
+    }
+  };
+
   // Get coordinates from address using OpenStreetMap Nominatim (FREE, no API key needed)
   // Supports regular addresses and Plus Codes (e.g., "XGHH+22 Floridablanca, Pampanga")
   const geocodeAddressOSM = async (address: string): Promise<{ lat: number; lng: number } | null> => {
@@ -127,13 +159,11 @@ export const useGoogleMaps = () => {
       const normalizedAddress = normalizePhilippineAddress(normalizePlusCodeAddress(address));
       
       // Try multiple address variations for better geocoding success
-      // Try multiple address variations for better geocoding success
-      // Prioritize most specific location (with Floridablanca/Pampanga)
+      // Prioritize most specific location but allow broader searches
       const addressVariations = [
-        `${normalizedAddress}, Floridablanca, Pampanga, Philippines`, // Most specific first
-        normalizedAddress.includes('Floridablanca') ? normalizedAddress : `${normalizedAddress}, Floridablanca`,
-        normalizedAddress.includes('Pampanga') ? normalizedAddress : `${normalizedAddress}, Pampanga`,
-        normalizedAddress, // Original as fallback
+        normalizedAddress, // Try exact input first (best for "SM Bacoor", "Luneta")
+        `${normalizedAddress}, Philippines`,
+        `${normalizedAddress}, Pampanga, Philippines`, // Keep Pampanga bias as fallback/option
       ];
       
       // Remove duplicates
@@ -142,17 +172,13 @@ export const useGoogleMaps = () => {
       // Try each variation until one works
       for (const fullAddress of uniqueVariations) {
         // If address contains a Plus Code, use it as-is (Plus Codes are already precise)
-        // Otherwise, add location context
-        const searchAddress = containsPlusCode(fullAddress) || fullAddress.includes('Pampanga') || fullAddress.includes('Philippines')
-          ? fullAddress 
-          : `${fullAddress}, Pampanga, Philippines`;
+        const searchAddress = containsPlusCode(fullAddress) ? fullAddress : fullAddress;
       
-      // Use viewbox to bias results towards Floridablanca/Pampanga area
-      // Box: left,top,right,bottom (approx coordinates for Pampanga)
-      const viewbox = '120.30,15.20,120.70,14.80';
+      // Remove viewbox restriction to allow searching anywhere
+      // We can still use countrycodes=ph to limit to Philippines
       
       const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchAddress)}&limit=1&countrycodes=ph&viewbox=${viewbox}&bounded=1`,
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchAddress)}&limit=1&countrycodes=ph`,
         {
           headers: {
             'User-Agent': 'E-Run-Delivery-App' // Required by Nominatim
@@ -373,41 +399,15 @@ export const useGoogleMaps = () => {
 
   // Calculate distance between two arbitrary addresses (e.g., Angkas/Padala pickup -> drop-off)
   const calculateDistanceBetweenAddresses = useCallback(
-    async (pickupAddress: string, dropoffAddress: string): Promise<DistanceResult | null> => {
+    async (pickupAddress: string, dropoffAddress: string): Promise<DistanceResult & { pickupCoordinates?: { lat: number, lng: number }, dropoffCoordinates?: { lat: number, lng: number } } | null> => {
       setLoading(true);
       setError(null);
 
       try {
-        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-        // Try Google Distance Matrix API first if key is available
-        if (apiKey) {
-          try {
-            const response = await fetch(
-              `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(
-                pickupAddress
-              )}&destinations=${encodeURIComponent(dropoffAddress)}&key=${apiKey}&units=metric&region=ph`
-            );
-            const data = await response.json();
-
-            if (data.status === 'OK' && data.rows[0]?.elements[0]?.status === 'OK') {
-              const element = data.rows[0].elements[0];
-              const distanceInKm = element.distance.value / 1000;
-              const duration = element.duration.text;
-
-              const result: DistanceResult = {
-                distance: Math.round(distanceInKm * 10) / 10,
-                duration
-              };
-              setLoading(false);
-              return result;
-            }
-          } catch (err) {
-            console.warn('Google DistanceMatrix error (pickup->dropoff):', err);
-          }
-        }
-
         // Fallback: geocode both addresses and use Haversine
+        // We do this first or in parallel if we want coordinates, because Google Distance Matrix doesn't return coordinates of the points, only distance.
+        // So we need to geocode anyway if we want to show markers.
+        
         let pickupCoords = await geocodeAddressGoogle(pickupAddress);
         if (!pickupCoords) {
           pickupCoords = await geocodeAddressOSM(pickupAddress);
@@ -424,7 +424,11 @@ export const useGoogleMaps = () => {
           
           if (osrmResult) {
             setLoading(false);
-            return osrmResult;
+            return {
+                ...osrmResult,
+                pickupCoordinates: pickupCoords,
+                dropoffCoordinates: dropoffCoords
+            };
           }
 
           // Fallback to Haversine if OSRM fails
@@ -437,7 +441,9 @@ export const useGoogleMaps = () => {
 
           setLoading(false);
           return {
-            distance: Math.round(distance * 10) / 10
+            distance: Math.round(distance * 10) / 10,
+            pickupCoordinates: pickupCoords,
+            dropoffCoordinates: dropoffCoords
           };
         }
 
@@ -508,6 +514,8 @@ export const useGoogleMaps = () => {
     loading,
     error,
     restaurantLocation: DELIVERY_CENTER,
-    maxDeliveryRadius: MAX_DELIVERY_RADIUS_KM
+    maxDeliveryRadius: MAX_DELIVERY_RADIUS_KM,
+    deliverySettings,
+    searchAddressOSM
   };
 };

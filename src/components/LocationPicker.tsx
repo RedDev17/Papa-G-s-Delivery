@@ -122,7 +122,7 @@ function MapFixer() {
 
 const LocationPicker: React.FC<LocationPickerProps> = ({ onLocationSelect, initialLocation }) => {
   // Default to Tagbilaran City if no initial location
-  const defaultCenter = { lat: 9.6445, lng: 123.8550 };
+  const defaultCenter = { lat: 14.9849683, lng: 120.5023 }; // Floridablanca, Pampanga
   const [position, setPosition] = useState<L.LatLng | null>(
     initialLocation ? new L.LatLng(initialLocation.lat, initialLocation.lng) : new L.LatLng(defaultCenter.lat, defaultCenter.lng)
   );
