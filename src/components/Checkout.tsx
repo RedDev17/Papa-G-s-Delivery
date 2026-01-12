@@ -322,7 +322,7 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600 flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
-                  Delivery Fee:
+                  Total Delivery Fee:
                   {isCalculatingDistance && (
                     <span className="text-xs text-gray-500 ml-1">(calculating...)</span>
                   )}
@@ -421,13 +421,7 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                       customerLocation={customerLocation}
                       distance={distance}
                       address={debouncedAddress}
-                      onLocationSelect={handleLocationSelect}
-                      restaurantName={currentRestaurant?.name}
-                      restaurantAddress={currentRestaurant?.deliveryTime ? `Delivery Time: ${currentRestaurant.deliveryTime}` : undefined}
                     />
-                    <p className="text-xs text-gray-500 mt-2 text-center">
-                      💡 Tip: You can drag the pin to adjust your exact location
-                    </p>
                   </div>
                 )}
               </div>

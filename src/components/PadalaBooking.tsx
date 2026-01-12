@@ -20,7 +20,7 @@ interface PabiliItem {
 }
 
 const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala', mode = 'full' }) => {
-  const { calculateDistanceBetweenAddresses, calculateDeliveryFee, restaurantLocation, deliverySettings } = useGoogleMaps();
+  const { calculateDistanceBetweenAddresses, calculateDeliveryFee, restaurantLocation } = useGoogleMaps();
   const { reverseGeocode } = useOpenStreetMap();
   const [formData, setFormData] = useState({
     customer_name: '',
@@ -48,10 +48,7 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
 
 
   const [distance, setDistance] = useState<number | null>(null);
-  const [leg1Distance, setLeg1Distance] = useState<number | null>(null);
-  const [leg2Distance, setLeg2Distance] = useState<number | null>(null);
   const [deliveryFee, setDeliveryFee] = useState<number>(60);
-  const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [debouncedPickupAddress, setDebouncedPickupAddress] = useState('');
@@ -81,21 +78,7 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
 
 
 
-  const handlePickupLocationDrag = async (lat: number, lng: number) => {
-    setPickupCoords({ lat, lng });
-    const address = await reverseGeocode(lat, lng);
-    if (address) {
-      setFormData(prev => ({ ...prev, pickup_address: address }));
-    }
-  };
 
-  const handleDeliveryLocationDrag = async (lat: number, lng: number) => {
-    setDeliveryCoords({ lat, lng });
-    const address = await reverseGeocode(lat, lng);
-    if (address) {
-      setFormData(prev => ({ ...prev, delivery_address: address }));
-    }
-  };
 
 
 
@@ -124,16 +107,16 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
   };
 
   const calculateFee = async () => {
-    if ((title !== 'Pabili' && !formData.pickup_address.trim()) || !formData.delivery_address.trim()) {
+    if (!formData.delivery_address.trim()) {
       return;
     }
 
     // For Pabili, we use the pickup address (Store Location) if provided
     // For Padala, we use the pickup address
     const pickup = formData.pickup_address || (restaurantLocation?.address || 'Floridablanca, Pampanga');
-    const center = restaurantLocation?.address || 'Floridablanca, Pampanga';
 
-    setIsCalculating(true);
+
+
     try {
       // We only charge for the distance between Pickup/Store and Customer
       // The Hub -> Pickup distance is internal logistics and shouldn't be charged to the customer
@@ -143,8 +126,7 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
 
       if (result && !isNaN(result.distance)) {
         setDistance(result.distance);
-        setLeg1Distance(null); // No longer displaying Hub -> Store
-        setLeg2Distance(null); // No longer displaying breakdown
+
         
         const fee = calculateDeliveryFee(result.distance);
         setDeliveryFee(fee);
@@ -166,7 +148,7 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
       setDistance(null);
       setDeliveryFee(60);
     } finally {
-      setIsCalculating(false);
+      // setIsCalculating(false);
     }
   };
 
@@ -190,7 +172,7 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
       !formData.customer_name ||
       !formData.contact_number ||
       (title === 'Pabili' && !formData.store_name) ||
-      !formData.pickup_address || // Required for both now (Store Location for Pabili)
+      (title !== 'Pabili' && !formData.pickup_address) || // Only required for Padala
       !formData.delivery_address ||
       (title !== 'Pabili' && !formData.item_description)
     ) {
@@ -207,7 +189,7 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
           contact_number: formData.contact_number,
           receiver_name: formData.receiver_name || null,
           receiver_contact: formData.receiver_contact || null,
-          pickup_address: formData.pickup_address, // Now used for Store Location in Pabili
+          pickup_address: formData.pickup_address || formData.store_name, // Fallback to Store Name if map location not provided
           delivery_address: formData.delivery_address,
           item_description: finalItemDescription || null,
           item_weight: mode === 'full' && formData.item_weight ? formData.item_weight : null,
@@ -231,60 +213,57 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
       
       if (title === 'Pabili') {
         // Pabili Format
-        message = `${headingEmoji} ${serviceLabel}
+        message = `${headingEmoji} ${serviceLabel} ORDER
 
- 👤 Customer: ${formData.customer_name}
- 📞 Phone: ${formData.contact_number}
+👤 Customer: ${formData.customer_name}
+📞 Phone: ${formData.contact_number}
 
- 👤 Receiver: ${formData.receiver_name || 'N/A'}
- 📞 Phone: ${formData.receiver_contact || 'N/A'}
- 📍 Map Location (Delivery):
- ${formData.delivery_address}
+👤 Receiver: ${formData.receiver_name || 'N/A'}
+📞 Phone: ${formData.receiver_contact || 'N/A'}
 
- 🏪 Store Name: ${formData.store_name}
- 📍 Map Location (Store):
- ${formData.pickup_address}
+🏪 Store: ${formData.store_name}
+📍 Store Location:
+${formData.pickup_address}
 
- 📦 Items:
-${pabiliItems.filter(i => i.name).map(i => `${i.name.padEnd(20, '.')} ${i.qty}`).join('\n')}
+📍 Delivery Location:
+${formData.delivery_address}
 
+📦 ITEMS TO BUY:
+${pabiliItems.filter(i => i.name).map(i => `• ${i.name} (Qty: ${i.qty})`).join('\n')}
+
+💰 TOTAL: ₱${deliveryFee.toFixed(2)} (Delivery Fee)
 ${distance ? `📏 Distance: ${distance} km` : ''}
-💰 Delivery Fee: ₱${deliveryFee.toFixed(2)}
 
-${formData.special_instructions ? `📝 Special Instructions: ${formData.special_instructions}` : ''}
+${formData.special_instructions ? `📝 Instructions: ${formData.special_instructions}` : ''}
 
-Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
+Please confirm this Pabili request. Thank you! 🛵`;
 
       } else {
         // Standard Padala Format
-        message = `${headingEmoji} ${serviceLabel}
+        message = `${headingEmoji} ${serviceLabel} REQUEST
 
- 👤 Sender: ${formData.customer_name}
- 📞 Contact: ${formData.contact_number}
+👤 Sender: ${formData.customer_name}
+📞 Contact: ${formData.contact_number}
 
- 👤 Receiver: ${formData.receiver_name || 'N/A'}
- 📞 Contact: ${formData.receiver_contact || 'N/A'}
+👤 Receiver: ${formData.receiver_name || 'N/A'}
+📞 Contact: ${formData.receiver_contact || 'N/A'}
 
- 📍 Pickup Address:
- ${formData.pickup_address}
+📍 PICKUP FROM:
+${formData.pickup_address}
 
- 📍 Delivery Address:
- ${formData.delivery_address}
+📍 DELIVER TO:
+${formData.delivery_address}
 
-${formData.item_description ? `📦 Item Details:\n${formData.item_description}\n` : ''}${
-        mode === 'full' && formData.item_weight ? `Weight: ${formData.item_weight}\n` : ''
-      }${
-        mode === 'full' && formData.item_value ? `Declared Value: ₱${formData.item_value}\n` : ''
-      }
-${mode === 'full' ? `📅 Preferred Date: ${formData.preferred_date || 'Any'}\n⏰ Preferred Time: ${formData.preferred_time}\n` : ''}
+📦 ITEM DETAILS:
+${formData.item_description}
+${mode === 'full' && formData.item_weight ? `Weight: ${formData.item_weight}\n` : ''}${mode === 'full' && formData.item_value ? `Value: ₱${formData.item_value}\n` : ''}
+${mode === 'full' ? `📅 Date: ${formData.preferred_date || 'Any'}\n⏰ Time: ${formData.preferred_time}\n` : ''}
+💰 TOTAL: ₱${deliveryFee.toFixed(2)} (Delivery Fee)
 ${distance ? `📏 Distance: ${distance} km` : ''}
-💰 Delivery Fee: ₱${deliveryFee.toFixed(2)}
 
-${formData.special_instructions ? `📝 Special Instructions: ${formData.special_instructions}` : ''}${
-        mode === 'full' && formData.notes ? `\n📝 Notes: ${formData.notes}` : ''
-      }
+${formData.special_instructions ? `📝 Instructions: ${formData.special_instructions}` : ''}${mode === 'full' && formData.notes ? `\n📝 Notes: ${formData.notes}` : ''}
 
-Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
+Please confirm this Padala request. Thank you! 🛵`;
       }
 
       const encodedMessage = encodeURIComponent(message);
@@ -458,7 +437,7 @@ Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Map Location (Store) *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Map Location (Store)</label>
                   <div className="relative">
                     <AddressAutocomplete
                         value={formData.pickup_address}
@@ -467,8 +446,7 @@ Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
                             setFormData(prev => ({ ...prev, pickup_address: address }));
                             setPickupCoords({ lat, lng });
                         }}
-                        required
-                        placeholder="Enter store address or pin location on map"
+                        placeholder="Enter store address or pin location on map (optional)"
                     />
 
                   </div>
@@ -501,11 +479,9 @@ Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <DeliveryMap
                       restaurantLocation={pickupCoords || restaurantLocation}
-                      customerLocation={deliveryCoords || undefined}
+                      customerLocation={deliveryCoords || null}
                       distance={distance}
                       address={formData.delivery_address}
-                      onLocationSelect={handleDeliveryLocationDrag}
-                      onRestaurantSelect={handlePickupLocationDrag}
                       restaurantName={title === 'Pabili' ? 'Store Location' : 'Pickup Location'}
                       restaurantAddress={formData.pickup_address}
                     />
@@ -668,39 +644,40 @@ Please confirm this ${serviceLabel} booking. Thank you! 🛵`;
           </div>
 
           {/* Delivery Fee Display */}
-          {distance !== null && deliveryFee > 0 && (
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
-              <h3 className="font-medium text-gray-900">Delivery Summary</h3>
-              
-              {/* Distance Row */}
-              <div className="flex items-start justify-between text-sm">
-                 <span className="text-gray-600 flex items-start gap-2">
-                    <Navigation className="h-4 w-4 mt-0.5" />
-                    <div>
-                        <span className="font-medium">Total Distance</span>
-                    </div>
-                 </span>
-                 <span className="text-gray-900 font-medium">{distance} km</span>
-              </div>
-
-              <div className="border-t border-gray-100"></div>
-
-              {/* Fee Row */}
-              <div className="flex items-start justify-between">
-                <span className="text-gray-600 flex items-start gap-2">
-                  <MapPin className="h-4 w-4 mt-1" />
-                  <div>
-                      <span className="font-medium">Delivery Fee</span>
-                      <div className="text-xs text-gray-500 mt-1 pl-2 border-l-2 border-gray-100 space-y-0.5">
-                        <p>Base Fee: ₱{deliverySettings.baseFee.toFixed(2)}</p>
-                        <p>Distance Fee: ₱{(deliveryFee - deliverySettings.baseFee).toFixed(2)}</p>
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
+            <h3 className="font-medium text-gray-900">Delivery Summary</h3>
+            
+            {/* Distance Row */}
+            {distance !== null && (
+              <>
+                <div className="flex items-start justify-between text-sm">
+                   <span className="text-gray-600 flex items-start gap-2">
+                      <Navigation className="h-4 w-4 mt-0.5" />
+                      <div>
+                          <span className="font-medium">Total Distance</span>
                       </div>
-                  </div>
-                </span>
-                <span className="text-xl font-bold text-delivery-primary">₱{deliveryFee.toFixed(2)}</span>
-              </div>
+                   </span>
+                   <span className="text-gray-900 font-medium">{distance} km</span>
+                </div>
+
+                <div className="border-t border-gray-100"></div>
+              </>
+            )}
+
+            {/* Fee Row */}
+            <div className="flex items-start justify-between">
+              <span className="text-gray-600 flex items-start gap-2">
+                <MapPin className="h-4 w-4 mt-1" />
+                <div>
+                    <span className="font-medium">Total Delivery Fee</span>
+                    {distance === null && (
+                      <p className="text-xs text-gray-500 font-normal">Base rate (distance not calculated)</p>
+                    )}
+                </div>
+              </span>
+              <span className="text-xl font-bold text-delivery-primary">₱{deliveryFee.toFixed(2)}</span>
             </div>
-          )}
+          </div>
 
           {/* Submit Button */}
           <button
