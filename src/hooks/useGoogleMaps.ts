@@ -4,9 +4,9 @@ import { supabase } from '../lib/supabase';
 // Delivery center: Floridablanca, Pampanga
 // This is the point from which delivery distance is calculated
 const DELIVERY_CENTER = {
-  lat: 14.9849683, 
-  lng: 120.5023, 
-  address: 'Floridablanca, Pampanga'
+  lat: 14.97463, 
+  lng: 120.52821,
+  address: 'Floridablanca Municipal Hall, Macabulos Street, Hacienda Teodoro, Maligaya, Floridablanca, Pampanga, Central Luzon, 2006, Philippines'
 };
 
 // Maximum delivery radius in kilometers from delivery center (adjust as needed)

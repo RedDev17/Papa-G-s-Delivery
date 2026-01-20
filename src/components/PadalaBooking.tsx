@@ -48,6 +48,7 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
 
 
   const [distance, setDistance] = useState<number | null>(null);
+  const [hubDistance, setHubDistance] = useState<number | null>(null);
   const [deliveryFee, setDeliveryFee] = useState<number>(60);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -123,6 +124,14 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
       
       // Calculate Pickup/Store -> Customer Delivery
       const result = await calculateDistanceBetweenAddresses(pickup, formData.delivery_address);
+      
+      // Calculate Hub -> Pickup (for informational purposes)
+      if (restaurantLocation && formData.pickup_address.trim()) {
+        const hubResult = await calculateDistanceBetweenAddresses(restaurantLocation.address, pickup);
+        if (hubResult) setHubDistance(hubResult.distance);
+      } else {
+        setHubDistance(null);
+      }
 
       if (result && !isNaN(result.distance)) {
         setDistance(result.distance);
@@ -132,16 +141,26 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
         setDeliveryFee(fee);
 
         // Update map coordinates if available
-        if (result.pickupCoordinates) {
+        // Only show pin if the address input is not empty
+        if (result.pickupCoordinates && formData.pickup_address.trim()) {
             setPickupCoords(result.pickupCoordinates);
+        } else if (!formData.pickup_address.trim()) {
+            // Clear pin if input is empty
+            setPickupCoords(null);
         }
-        if (result.dropoffCoordinates) {
+
+        if (result.dropoffCoordinates && formData.delivery_address.trim()) {
             setDeliveryCoords(result.dropoffCoordinates);
+        } else if (!formData.delivery_address.trim()) {
+             // Clear pin if input is empty
+            setDeliveryCoords(null);
         }
 
       } else {
         setDistance(null);
         setDeliveryFee(60);
+        // Do not clear coords here, as we might keep old valid coords if calculation fails momentarily
+        // or we could clear them if that's safer. Let's rely on the input check above.
       }
     } catch (error) {
       console.error('Error calculating fee:', error);
@@ -478,8 +497,9 @@ Please confirm this Padala request. Thank you! 🛵`;
                   <label className="block text-sm font-medium text-gray-700 mb-2">Route Preview</label>
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <DeliveryMap
-                      restaurantLocation={pickupCoords || restaurantLocation}
-                      customerLocation={deliveryCoords || null}
+                      hubLocation={restaurantLocation} // Delivery Center
+                      restaurantLocation={pickupCoords} // Pickup Location (User selected)
+                      customerLocation={deliveryCoords || null} // Receiver Location
                       distance={distance}
                       address={formData.delivery_address}
                       restaurantName={title === 'Pabili' ? 'Store Location' : 'Pickup Location'}
@@ -648,13 +668,28 @@ Please confirm this Padala request. Thank you! 🛵`;
             <h3 className="font-medium text-gray-900">Delivery Summary</h3>
             
             {/* Distance Row */}
+            {hubDistance !== null && (
+              <>
+                <div className="flex items-start justify-between text-sm text-gray-500">
+                   <span className="flex items-start gap-2">
+                      <Navigation className="h-4 w-4 mt-0.5 text-orange-500" />
+                      <div>
+                          <span className="font-medium">Distance to Pickup (from Hub)</span>
+                      </div>
+                   </span>
+                   <span className="font-medium">{hubDistance} km</span>
+                </div>
+                <div className="border-t border-gray-100 my-2"></div>
+              </>
+            )}
+
             {distance !== null && (
               <>
                 <div className="flex items-start justify-between text-sm">
                    <span className="text-gray-600 flex items-start gap-2">
                       <Navigation className="h-4 w-4 mt-0.5" />
                       <div>
-                          <span className="font-medium">Total Distance</span>
+                          <span className="font-medium">Total Distance (Delivery)</span>
                       </div>
                    </span>
                    <span className="text-gray-900 font-medium">{distance} km</span>
