@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, Loader2, Navigation, Building2, Home, Landmark, Store, ChefHat } from 'lucide-react';
 import { useGoogleMaps } from '../hooks/useGoogleMaps';
 import { useOpenStreetMap } from '../hooks/useOpenStreetMap';
+
+// Search cache to prevent repeated API calls for the same query
+const searchCache = new Map<string, Array<{ label: string; value: { lat: number; lng: number }; raw?: unknown }>>();
 
 interface AddressAutocompleteProps {
   value: string;
@@ -24,20 +27,27 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   name,
   className
 }) => {
-  const [suggestions, setSuggestions] = useState<Array<{ label: string; value: { lat: number; lng: number }; raw?: any }>>([]);
+  const [suggestions, setSuggestions] = useState<Array<{ label: string; value: { lat: number; lng: number }; raw?: unknown }>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { searchAddressOSM } = useGoogleMaps();
   const { reverseGeocode } = useOpenStreetMap();
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  
+  // Track the last searched value to prevent duplicate searches
+  const lastSearchedRef = useRef<string>('');
+  // Store the search function in a ref to avoid dependency issues
+  const searchFnRef = useRef(searchAddressOSM);
+  searchFnRef.current = searchAddressOSM;
 
   // Get appropriate icon based on location type from Nominatim
-  const getLocationIcon = (raw?: any) => {
-    if (!raw) return <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />;
+  const getLocationIcon = useCallback((raw?: unknown) => {
+    if (!raw || typeof raw !== 'object') return <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />;
     
-    const type = raw.type?.toLowerCase() || '';
-    const category = raw.class?.toLowerCase() || '';
+    const rawObj = raw as { type?: string; class?: string };
+    const type = rawObj.type?.toLowerCase() || '';
+    const category = rawObj.class?.toLowerCase() || '';
     
     // Restaurant, food, cafe
     if (type.includes('restaurant') || type.includes('cafe') || type.includes('fast_food') || 
@@ -74,7 +84,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     
     // Default pin icon
     return <MapPin className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />;
-  };
+  }, []);
 
   // Handle outside click to close suggestions
   useEffect(() => {
@@ -87,21 +97,46 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounce search
+  // Debounce search with caching to prevent repeated calls
   useEffect(() => {
+    // Skip if value is too short or suggestions are hidden
+    if (value.length < 3 || !showSuggestions) {
+      setSuggestions([]);
+      return;
+    }
+    
+    // Skip if we already searched for this exact value
+    if (lastSearchedRef.current === value) {
+      return;
+    }
+    
+    // Check cache first
+    const cacheKey = value.toLowerCase().trim();
+    if (searchCache.has(cacheKey)) {
+      setSuggestions(searchCache.get(cacheKey)!);
+      lastSearchedRef.current = value;
+      return;
+    }
+
+    setIsLoading(true);
+    
     const timer = setTimeout(async () => {
-      if (value.length >= 3 && showSuggestions) {
-        setIsLoading(true);
-        const results = await searchAddressOSM(value);
+      try {
+        const results = await searchFnRef.current(value);
+        // Cache the results
+        searchCache.set(cacheKey, results);
         setSuggestions(results);
-        setIsLoading(false);
-      } else {
+        lastSearchedRef.current = value;
+      } catch (error) {
+        console.error('Search error:', error);
         setSuggestions([]);
+      } finally {
+        setIsLoading(false);
       }
-    }, 500);
+    }, 300); // Reduced from 500ms to 300ms for faster feedback
 
     return () => clearTimeout(timer);
-  }, [value, showSuggestions, searchAddressOSM]);
+  }, [value, showSuggestions]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
