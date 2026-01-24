@@ -1,14 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
-interface RestaurantRating {
-  id: string;
-  restaurant_id: string;
-  rating: number;
-  ip_address: string;
-  created_at: string;
-}
-
 export const useRestaurantRating = (restaurantId: string) => {
   const [hasRated, setHasRated] = useState<boolean | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

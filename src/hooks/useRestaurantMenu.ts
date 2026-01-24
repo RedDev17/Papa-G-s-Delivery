@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { RestaurantMenuItem, MenuItem } from '../types';
+import { RestaurantMenuItem } from '../types';
 
 export const useRestaurantMenu = (restaurantId: string) => {
   const [menuItems, setMenuItems] = useState<RestaurantMenuItem[]>([]);

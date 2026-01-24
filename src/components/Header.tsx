@@ -40,7 +40,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartClick, onMenuClic
             </h1>
           </button>
 
-          <div className="flex items-center space-x-2">
+          <div className="hidden sm:flex items-center space-x-2">
             <button 
               onClick={onCartClick}
               className="relative p-2 text-gray-700 hover:text-delivery-primary hover:bg-red-50 rounded-full transition-all duration-200"

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, MapPin, Plus, Trash2, Navigation } from 'lucide-react';
+import { ArrowLeft, MapPin, Plus, Trash2, Navigation, Package } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useGoogleMaps } from '../hooks/useGoogleMaps';
-import { useOpenStreetMap } from '../hooks/useOpenStreetMap';
 import AddressAutocomplete from './AddressAutocomplete';
 import Header from './Header';
 
@@ -21,7 +20,6 @@ interface PabiliItem {
 
 const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala', mode = 'full' }) => {
   const { calculateDistanceBetweenAddresses, calculateDeliveryFee, restaurantLocation } = useGoogleMaps();
-  const { reverseGeocode } = useOpenStreetMap();
   const [formData, setFormData] = useState({
     customer_name: '',
     contact_number: '',
@@ -136,8 +134,9 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
       if (result && !isNaN(result.distance)) {
         setDistance(result.distance);
 
-        
-        const fee = calculateDeliveryFee(result.distance);
+        // Calculate fee using service-specific settings
+        const serviceType = title === 'Pabili' ? 'pabili' : 'padala';
+        const fee = calculateDeliveryFee(result.distance, serviceType);
         setDeliveryFee(fee);
 
         // Update map coordinates if available
@@ -157,8 +156,9 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
         }
 
       } else {
-        setDistance(null);
-        setDeliveryFee(60);
+        // Use service-specific settings for fallback fee
+        const serviceType = title === 'Pabili' ? 'pabili' : 'padala';
+        setDeliveryFee(calculateDeliveryFee(null, serviceType));
         // Do not clear coords here, as we might keep old valid coords if calculation fails momentarily
         // or we could clear them if that's safer. Let's rely on the input check above.
       }
@@ -309,7 +309,9 @@ Please confirm this Padala request. Thank you! 🛵`;
       });
       setPabiliItems([{ name: '', qty: '' }]);
       setDistance(null);
-      setDeliveryFee(60);
+      // Use service-specific base fee when resetting
+      const serviceType = title === 'Pabili' ? 'pabili' : 'padala';
+      setDeliveryFee(calculateDeliveryFee(null, serviceType));
     } catch (error) {
       console.error('Error submitting booking:', error);
       alert('Failed to submit booking. Please try again.');
@@ -342,9 +344,7 @@ Please confirm this Padala request. Thank you! 🛵`;
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-black flex items-center gap-2">
             {title !== 'Pabili' && (
-              <span className="text-2xl sm:text-3xl">
-                📦
-              </span>
+              <Package className="h-7 w-7 sm:h-8 sm:w-8 text-delivery-primary" />
             )}
             {title}
           </h1>
@@ -504,6 +504,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                       address={formData.delivery_address}
                       restaurantName={title === 'Pabili' ? 'Store Location' : 'Pickup Location'}
                       restaurantAddress={formData.pickup_address}
+                      markerType={title === 'Pabili' ? 'store' : 'package'}
                     />
                   </div>
                 </div>

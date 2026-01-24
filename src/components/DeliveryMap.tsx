@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from 'react-leaflet';
 import RoutingMachine from './RoutingMachine';
 import L from 'leaflet';
@@ -21,7 +21,7 @@ const DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Custom restaurant icon
+// Custom restaurant icon (store)
 const restaurantIcon = L.divIcon({
   className: 'custom-restaurant-marker',
   html: `<div style="
@@ -36,7 +36,28 @@ const restaurantIcon = L.divIcon({
     justify-content: center;
     color: white;
     font-size: 20px;
-  ">🛵</div>`,
+  ">🏪</div>`,
+  iconSize: [40, 40],
+  iconAnchor: [20, 40],
+  popupAnchor: [0, -40]
+});
+
+// Custom package icon for Padala
+const packageIcon = L.divIcon({
+  className: 'custom-package-marker',
+  html: `<div style="
+    background-color: #f97316;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+  ">📦</div>`,
   iconSize: [40, 40],
   iconAnchor: [20, 40],
   popupAnchor: [0, -40]
@@ -95,6 +116,7 @@ interface DeliveryMapProps {
   onRestaurantSelect?: (lat: number, lng: number) => void;
   restaurantName?: string;
   restaurantAddress?: string;
+  markerType?: 'store' | 'package';
 }
 
 const MapBounds: React.FC<{
@@ -155,8 +177,12 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
   onLocationSelect,
   onRestaurantSelect,
   restaurantName = "Papa G's Delivery",
-  restaurantAddress = "Floridablanca, Pampanga"
+  restaurantAddress = "Floridablanca, Pampanga",
+  markerType = 'store'
 }) => {
+
+  // Select the appropriate icon based on markerType
+  const pickupIcon = markerType === 'package' ? packageIcon : restaurantIcon;
 
 
   return (
@@ -167,10 +193,10 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
         style={{ height: '100%', width: '100%' }}
         zoomControl={false} // Disable default zoom control to move it
       >
-        {/* Google Maps-like Tile Layer (CartoDB Voyager) */}
+        {/* Default OpenStreetMap Tile Layer */}
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
         {/* Custom Zoom Control at Bottom Right */}
@@ -224,7 +250,7 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
         {restaurantLocation && (
           <Marker 
             position={[restaurantLocation.lat, restaurantLocation.lng]} 
-            icon={restaurantIcon}
+            icon={pickupIcon}
             draggable={!!onRestaurantSelect}
             eventHandlers={{
               dragend: (e) => {
@@ -238,7 +264,7 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
           >
             <Popup className="custom-popup">
               <div className="text-center p-1">
-                <p className="font-semibold text-green-600 text-sm">🛵 {restaurantName}</p>
+                <p className="font-semibold text-green-600 text-sm">🏪 {restaurantName}</p>
                 <p className="text-xs text-gray-600 mt-1">{restaurantAddress}</p>
                 {onRestaurantSelect && <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">(Drag to move)</p>}
               </div>

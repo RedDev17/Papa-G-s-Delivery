@@ -258,16 +258,17 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
 
   if (step === 'details') {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center mb-8">
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 sm:mb-8">
           <button
             onClick={onBack}
             className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors duration-200"
           >
             <ArrowLeft className="h-5 w-5" />
-            <span>Back to Cart</span>
+            <span className="hidden sm:inline">Back to Cart</span>
+            <span className="sm:hidden">Back</span>
           </button>
-          <h1 className="text-3xl font-noto font-semibold text-black ml-8">Delivery Details</h1>
+          <h1 className="text-2xl sm:text-3xl font-noto font-semibold text-black sm:ml-4">Delivery Details</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -469,16 +470,17 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
 
   // Payment Step
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center mb-8">
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 sm:mb-8">
         <button
           onClick={() => setStep('details')}
           className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors duration-200"
         >
           <ArrowLeft className="h-5 w-5" />
-          <span>Back to Details</span>
+          <span className="hidden sm:inline">Back to Details</span>
+          <span className="sm:hidden">Back</span>
         </button>
-        <h1 className="text-3xl font-noto font-semibold text-black ml-8">Payment</h1>
+        <h1 className="text-2xl sm:text-3xl font-noto font-semibold text-black sm:ml-4">Payment</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

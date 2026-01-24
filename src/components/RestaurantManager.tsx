@@ -121,8 +121,9 @@ const RestaurantManager: React.FC<RestaurantManagerProps> = ({ onBack }) => {
   
       setCurrentView('list');
       setEditingRestaurant(null);
-    } catch (error: any) {
-      alert(error.message || 'Failed to save restaurant');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to save restaurant';
+      alert(message);
     }
   };
 
@@ -137,7 +138,7 @@ const RestaurantManager: React.FC<RestaurantManagerProps> = ({ onBack }) => {
       try {
         await deleteRestaurant(id);
         refetch();
-      } catch (error) {
+      } catch (_error) {
         alert('Failed to delete restaurant');
       }
     }

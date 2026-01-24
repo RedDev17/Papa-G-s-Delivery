@@ -49,7 +49,7 @@ const AdminDashboard: React.FC = () => {
       try {
         setIsProcessing(true);
         await deleteMenuItem(id);
-      } catch (error) {
+      } catch (_error) {
         alert('Failed to delete item. Please try again.');
       } finally {
         setIsProcessing(false);
@@ -69,7 +69,7 @@ const AdminDashboard: React.FC = () => {
         setCurrentView('items');
         setEditingItem(null);
       }
-    } catch (error) {
+    } catch (_error) {
       alert('Failed to save item');
     }
   };
@@ -104,7 +104,7 @@ const AdminDashboard: React.FC = () => {
         setSelectedItems([]);
         setShowBulkActions(false);
         alert(`Successfully deleted ${selectedItems.length} item(s).`);
-      } catch (error) {
+      } catch (_error) {
         alert('Failed to delete some items. Please try again.');
       } finally {
         setIsProcessing(false);
@@ -131,7 +131,7 @@ const AdminDashboard: React.FC = () => {
         setSelectedItems([]);
         setShowBulkActions(false);
         alert(`Successfully updated category for ${selectedItems.length} item(s)`);
-      } catch (error) {
+      } catch (_error) {
         alert('Failed to update some items');
       } finally {
         setIsProcessing(false);
@@ -948,20 +948,20 @@ const AdminDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:h-16 gap-3 sm:gap-0">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-noto font-semibold text-black">Papa G's Delivery Admin</h1>
+              <h1 className="text-xl sm:text-2xl font-noto font-semibold text-black">Papa G's Admin</h1>
             </div>
             <div className="flex items-center space-x-4">
               <a
                 href="/"
-                className="text-gray-600 hover:text-black transition-colors duration-200"
+                className="text-sm sm:text-base text-gray-600 hover:text-black transition-colors duration-200"
               >
                 View Website
               </a>
               <button
                 onClick={handleLogout}
-                className="text-gray-600 hover:text-black transition-colors duration-200"
+                className="text-sm sm:text-base text-gray-600 hover:text-black transition-colors duration-200"
               >
                 Logout
               </button>
@@ -970,53 +970,53 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 bg-green-600 rounded-lg">
-                <Package className="h-6 w-6 text-white" />
+                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Items</p>
-                <p className="text-2xl font-semibold text-gray-900">{totalItems}</p>
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Total Items</p>
+                <p className="text-xl sm:text-2xl font-semibold text-gray-900">{totalItems}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 bg-green-500 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-white" />
+                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Available Items</p>
-                <p className="text-2xl font-semibold text-gray-900">{availableItems}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-cream-500 rounded-lg">
-                <Coffee className="h-6 w-6 text-white" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Popular Items</p>
-                <p className="text-2xl font-semibold text-gray-900">{popularItems}</p>
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Available</p>
+                <p className="text-xl sm:text-2xl font-semibold text-gray-900">{availableItems}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-green-500 rounded-lg">
-                <Coffee className="h-6 w-6 text-white" />
+              <div className="p-2 bg-orange-500 rounded-lg">
+                <Coffee className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Restaurants</p>
-                <p className="text-2xl font-semibold text-gray-900">{activeRestaurants}/{restaurantCount}</p>
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Popular</p>
+                <p className="text-xl sm:text-2xl font-semibold text-gray-900">{popularItems}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <Coffee className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Restaurants</p>
+                <p className="text-xl sm:text-2xl font-semibold text-gray-900">{activeRestaurants}/{restaurantCount}</p>
               </div>
             </div>
           </div>

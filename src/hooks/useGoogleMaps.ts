@@ -65,34 +65,65 @@ export const useGoogleMaps = () => {
     lng: DELIVERY_CENTER.lng
   });
   
-  const [deliverySettings, setDeliverySettings] = useState<{ baseFee: number; perKmFee: number; baseDistance: number }>({
-    baseFee: 60,
-    perKmFee: 13,
-    baseDistance: 3
+  // Service-specific delivery settings
+  type ServiceType = 'food' | 'padala' | 'pabili';
+  
+  interface ServiceSettings {
+    baseFee: number;
+    perKmFee: number;
+    baseDistance: number;
+  }
+  
+  const defaultServiceSettings: ServiceSettings = { baseFee: 60, perKmFee: 13, baseDistance: 3 };
+  
+  const [deliverySettings, setDeliverySettings] = useState<Record<ServiceType, ServiceSettings>>({
+    food: { ...defaultServiceSettings },
+    padala: { ...defaultServiceSettings },
+    pabili: { ...defaultServiceSettings }
   });
 
-  // Fetch delivery settings from database
+  // Fetch delivery settings from database for all services
   useEffect(() => {
     const fetchDeliverySettings = async () => {
       try {
         const { data, error } = await supabase
           .from('site_settings')
           .select('*')
-          .in('id', ['delivery_base_fee', 'delivery_per_km_fee', 'delivery_base_distance']);
+          .in('id', [
+            // Food delivery settings
+            'delivery_base_fee', 'delivery_per_km_fee', 'delivery_base_distance',
+            // Padala settings
+            'padala_base_fee', 'padala_per_km_fee', 'padala_base_distance',
+            // Pabili settings
+            'pabili_base_fee', 'pabili_per_km_fee', 'pabili_base_distance'
+          ]);
 
         if (error) throw error;
 
         if (data) {
-          const settings: any = {};
+          const newSettings: Record<ServiceType, ServiceSettings> = {
+            food: { ...defaultServiceSettings },
+            padala: { ...defaultServiceSettings },
+            pabili: { ...defaultServiceSettings }
+          };
+          
           data.forEach((item: any) => {
-            settings[item.id] = parseFloat(item.value);
+            const value = parseFloat(item.value);
+            // Food delivery (original settings)
+            if (item.id === 'delivery_base_fee') newSettings.food.baseFee = value;
+            if (item.id === 'delivery_per_km_fee') newSettings.food.perKmFee = value;
+            if (item.id === 'delivery_base_distance') newSettings.food.baseDistance = value;
+            // Padala
+            if (item.id === 'padala_base_fee') newSettings.padala.baseFee = value;
+            if (item.id === 'padala_per_km_fee') newSettings.padala.perKmFee = value;
+            if (item.id === 'padala_base_distance') newSettings.padala.baseDistance = value;
+            // Pabili
+            if (item.id === 'pabili_base_fee') newSettings.pabili.baseFee = value;
+            if (item.id === 'pabili_per_km_fee') newSettings.pabili.perKmFee = value;
+            if (item.id === 'pabili_base_distance') newSettings.pabili.baseDistance = value;
           });
           
-          setDeliverySettings({
-            baseFee: settings.delivery_base_fee || 60,
-            perKmFee: settings.delivery_per_km_fee || 13,
-            baseDistance: settings.delivery_base_distance || 0
-          });
+          setDeliverySettings(newSettings);
         }
       } catch (err) {
         console.error('Error fetching delivery settings:', err);
@@ -460,19 +491,21 @@ export const useGoogleMaps = () => {
     []
   );
 
-  // Calculate delivery fee (shared by Food / Pabili / Padala / Angkas)
-  // Dynamic delivery fee calculation based on settings
-  const calculateDeliveryFee = useCallback((distance: number | null): number => {
+  // Calculate delivery fee for specific service type
+  // Dynamic delivery fee calculation based on service-specific settings
+  const calculateDeliveryFee = useCallback((distance: number | null, serviceType: 'food' | 'padala' | 'pabili' = 'food'): number => {
+    const settings = deliverySettings[serviceType];
+    
     if (distance === null || distance === undefined || isNaN(distance)) {
-      return deliverySettings.baseFee; // Base fee if distance cannot be calculated
+      return settings.baseFee; // Base fee if distance cannot be calculated
     }
 
     // Calculate total: base fee + ((distance - baseDistance) * per km fee)
     // If distance is within base distance, only base fee applies
     // Only charge for every FULL kilometer added (step pricing)
-    const chargeableDistance = Math.max(0, distance - deliverySettings.baseDistance);
+    const chargeableDistance = Math.max(0, distance - settings.baseDistance);
     const chargeableFullKm = Math.floor(chargeableDistance);
-    return deliverySettings.baseFee + (chargeableFullKm * deliverySettings.perKmFee);
+    return settings.baseFee + (chargeableFullKm * settings.perKmFee);
   }, [deliverySettings]);
 
   // Check if customer address is within delivery area (distance from restaurant)

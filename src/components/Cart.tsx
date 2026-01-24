@@ -47,19 +47,22 @@ const Cart: React.FC<CartProps> = ({
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <button
-          onClick={onContinueShopping}
-          className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors duration-200"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span>Continue Shopping</span>
-        </button>
-        <h1 className="text-3xl font-playfair font-semibold text-black">Your Cart</h1>
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+        <div className="flex items-center justify-between sm:justify-start gap-4">
+          <button
+            onClick={onContinueShopping}
+            className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors duration-200"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="hidden sm:inline">Continue Shopping</span>
+            <span className="sm:hidden">Back</span>
+          </button>
+          <h1 className="text-2xl sm:text-3xl font-playfair font-semibold text-black sm:ml-4">Your Cart</h1>
+        </div>
         <button
           onClick={clearCart}
-          className="text-red-500 hover:text-red-600 transition-colors duration-200 text-sm font-medium"
+          className="text-red-500 hover:text-red-600 transition-colors duration-200 text-sm font-medium self-end sm:self-auto"
         >
           Clear All
         </button>
@@ -67,15 +70,15 @@ const Cart: React.FC<CartProps> = ({
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-8">
         {cartItems.map((item, index) => (
-          <div key={item.id} className={`p-6 ${index !== cartItems.length - 1 ? 'border-b border-cream-200' : ''}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h3 className="text-lg font-noto font-medium text-black mb-1">{item.name}</h3>
+          <div key={item.id} className={`p-4 sm:p-6 ${index !== cartItems.length - 1 ? 'border-b border-cream-200' : ''}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-noto font-medium text-black mb-1 truncate">{item.name}</h3>
                 {item.selectedVariation && (
                   <p className="text-sm text-gray-500 mb-1">Size: {item.selectedVariation.name}</p>
                 )}
                 {item.selectedAddOns && item.selectedAddOns.length > 0 && (
-                  <p className="text-sm text-gray-500 mb-1">
+                  <p className="text-sm text-gray-500 mb-1 line-clamp-2">
                     Add-ons: {item.selectedAddOns.map(addOn => 
                       addOn.quantity && addOn.quantity > 1 
                         ? `${addOn.name} x${addOn.quantity}`
@@ -83,28 +86,28 @@ const Cart: React.FC<CartProps> = ({
                     ).join(', ')}
                   </p>
                 )}
-                <p className="text-lg font-semibold text-black">₱{item.totalPrice} each</p>
+                <p className="text-sm sm:text-base font-semibold text-gray-600">₱{item.totalPrice} each</p>
               </div>
               
-              <div className="flex items-center space-x-4 ml-4">
-                <div className="flex items-center space-x-3 bg-red-100 rounded-full p-1 border border-red-200">
+              <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 flex-wrap">
+                <div className="flex items-center space-x-2 sm:space-x-3 bg-red-100 rounded-full p-1 border border-red-200">
                   <button
                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className="p-2 hover:bg-red-200 rounded-full transition-colors duration-200"
+                    className="p-1.5 sm:p-2 hover:bg-red-200 rounded-full transition-colors duration-200"
                   >
-                    <Minus className="h-4 w-4 text-gray-700" />
+                    <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-700" />
                   </button>
-                  <span className="font-semibold text-black min-w-[32px] text-center">{item.quantity}</span>
+                  <span className="font-semibold text-black min-w-[24px] sm:min-w-[32px] text-center text-sm sm:text-base">{item.quantity}</span>
                   <button
                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="p-2 hover:bg-red-200 rounded-full transition-colors duration-200"
+                    className="p-1.5 sm:p-2 hover:bg-red-200 rounded-full transition-colors duration-200"
                   >
-                    <Plus className="h-4 w-4 text-gray-700" />
+                    <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-700" />
                   </button>
                 </div>
                 
                 <div className="text-right">
-                  <p className="text-lg font-semibold text-black">₱{item.totalPrice * item.quantity}</p>
+                  <p className="text-base sm:text-lg font-semibold text-black">₱{item.totalPrice * item.quantity}</p>
                 </div>
                 
                 <button

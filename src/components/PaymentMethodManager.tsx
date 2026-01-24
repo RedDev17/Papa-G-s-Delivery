@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Save, X, ArrowLeft, CreditCard, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, ArrowLeft, CreditCard } from 'lucide-react';
 import { usePaymentMethods, PaymentMethod } from '../hooks/usePaymentMethods';
 import ImageUpload from './ImageUpload';
 
@@ -117,7 +117,7 @@ const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({ onBack }) =
         errorMessage = error.message;
       } else if (typeof error === 'object' && error !== null) {
         // Try to extract error message from error object
-        const err = error as any;
+        const err = error as { message?: string; error?: { message?: string }; details?: string };
         errorMessage = err.message || err.error?.message || err.details || JSON.stringify(error);
       }
       

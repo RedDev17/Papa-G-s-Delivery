@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Loader2, Navigation } from 'lucide-react';
+import { MapPin, Loader2, Navigation, Building2, Home, Landmark, Store, ChefHat } from 'lucide-react';
 import { useGoogleMaps } from '../hooks/useGoogleMaps';
 import { useOpenStreetMap } from '../hooks/useOpenStreetMap';
 
@@ -24,13 +24,57 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   name,
   className
 }) => {
-  const [suggestions, setSuggestions] = useState<Array<{ label: string; value: { lat: number; lng: number } }>>([]);
+  const [suggestions, setSuggestions] = useState<Array<{ label: string; value: { lat: number; lng: number }; raw?: any }>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { searchAddressOSM } = useGoogleMaps();
   const { reverseGeocode } = useOpenStreetMap();
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  // Get appropriate icon based on location type from Nominatim
+  const getLocationIcon = (raw?: any) => {
+    if (!raw) return <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />;
+    
+    const type = raw.type?.toLowerCase() || '';
+    const category = raw.class?.toLowerCase() || '';
+    
+    // Restaurant, food, cafe
+    if (type.includes('restaurant') || type.includes('cafe') || type.includes('fast_food') || 
+        type.includes('food') || category === 'amenity' && (type.includes('bar') || type.includes('pub'))) {
+      return <ChefHat className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />;
+    }
+    
+    // Shops and stores
+    if (category === 'shop' || type.includes('mall') || type.includes('supermarket') || 
+        type.includes('convenience') || type.includes('store') || type.includes('market')) {
+      return <Store className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />;
+    }
+    
+    // Government, landmarks, places of worship
+    if (type.includes('government') || type.includes('townhall') || type.includes('city_hall') ||
+        type.includes('museum') || type.includes('monument') || type.includes('memorial') ||
+        type.includes('church') || type.includes('place_of_worship') || category === 'historic') {
+      return <Landmark className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />;
+    }
+    
+    // Buildings, offices, commercial
+    if (category === 'building' || type.includes('office') || type.includes('commercial') ||
+        type.includes('industrial') || type.includes('hotel') || type.includes('hospital') ||
+        type.includes('school') || type.includes('university') || type.includes('college')) {
+      return <Building2 className="h-5 w-5 text-slate-500 mt-0.5 flex-shrink-0" />;
+    }
+    
+    // Residential
+    if (type.includes('house') || type.includes('residential') || type.includes('apartment') ||
+        type.includes('apartments') || type.includes('subdivision') || category === 'place' && 
+        (type.includes('village') || type.includes('suburb') || type.includes('neighbourhood'))) {
+      return <Home className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />;
+    }
+    
+    // Default pin icon
+    return <MapPin className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />;
+  };
 
   // Handle outside click to close suggestions
   useEffect(() => {
@@ -150,7 +194,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
               onClick={() => handleSelect(suggestion)}
               className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors flex items-start gap-3"
             >
-              <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+              {getLocationIcon(suggestion.raw)}
               <span className="text-sm text-gray-700">{suggestion.label}</span>
             </button>
           ))}
