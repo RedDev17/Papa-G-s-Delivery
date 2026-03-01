@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { RestaurantMenuItem } from '../types';
 
@@ -7,7 +7,7 @@ export const useRestaurantMenu = (restaurantId: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMenuItems = async () => {
+  const fetchMenuItems = useCallback(async () => {
     if (!restaurantId) {
       setLoading(false);
       return;
@@ -57,12 +57,12 @@ export const useRestaurantMenu = (restaurantId: string) => {
           discountActive: item.discount_active || false,
           effectivePrice,
           isOnDiscount: isDiscountActive,
-          variations: item.variations?.map(v => ({
+          variations: item.variations?.map((v: {id: string, name: string, price: number}) => ({
             id: v.id,
             name: v.name,
             price: v.price
           })) || [],
-          addOns: item.add_ons?.map(a => ({
+          addOns: item.add_ons?.map((a: {id: string, name: string, price: number, category: string}) => ({
             id: a.id,
             name: a.name,
             price: a.price,
@@ -79,11 +79,11 @@ export const useRestaurantMenu = (restaurantId: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [restaurantId]);
 
   useEffect(() => {
     fetchMenuItems();
-  }, [restaurantId]);
+  }, [fetchMenuItems]);
 
   return {
     menuItems,

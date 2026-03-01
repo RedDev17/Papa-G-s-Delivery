@@ -72,7 +72,7 @@ const RestaurantMenuManager: React.FC<RestaurantMenuManagerProps> = ({
     if (confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
       try {
         await deleteMenuItem(id);
-      } catch (_error) {
+      } catch {
         alert('Failed to delete item. Please try again.');
       }
     }

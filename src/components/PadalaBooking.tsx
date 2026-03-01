@@ -73,6 +73,7 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
     if (debouncedPickupAddress || debouncedDeliveryAddress) {
       calculateFee();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedPickupAddress, debouncedDeliveryAddress]);
 
 

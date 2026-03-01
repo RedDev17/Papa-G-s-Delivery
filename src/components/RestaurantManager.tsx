@@ -138,7 +138,7 @@ const RestaurantManager: React.FC<RestaurantManagerProps> = ({ onBack }) => {
       try {
         await deleteRestaurant(id);
         refetch();
-      } catch (_error) {
+      } catch {
         alert('Failed to delete restaurant');
       }
     }

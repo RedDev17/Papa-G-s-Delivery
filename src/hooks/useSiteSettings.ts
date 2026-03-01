@@ -25,7 +25,10 @@ export const useSiteSettings = () => {
         site_logo: data.find(s => s.id === 'site_logo')?.value || '',
         site_description: data.find(s => s.id === 'site_description')?.value || '',
         currency: data.find(s => s.id === 'currency')?.value || 'PHP',
-        currency_code: data.find(s => s.id === 'currency_code')?.value || 'PHP'
+        currency_code: data.find(s => s.id === 'currency_code')?.value || 'PHP',
+        service_food_visible: data.find(s => s.id === 'service_food_visible')?.value !== 'false',
+        service_pabili_visible: data.find(s => s.id === 'service_pabili_visible')?.value !== 'false',
+        service_padala_visible: data.find(s => s.id === 'service_padala_visible')?.value !== 'false',
       };
 
       setSiteSettings(settings);
@@ -64,8 +67,7 @@ export const useSiteSettings = () => {
       const updatePromises = Object.entries(updates).map(([key, value]) =>
         supabase
           .from('site_settings')
-          .update({ value })
-          .eq('id', key)
+          .upsert({ id: key, value, type: typeof value === 'boolean' || value === 'true' || value === 'false' ? 'boolean' : 'text' })
       );
 
       const results = await Promise.all(updatePromises);

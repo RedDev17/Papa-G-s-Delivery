@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Restaurant, RestaurantMenuItem, CartItem, MenuItem } from '../types';
+import { Restaurant, RestaurantMenuItem, CartItem, MenuItem, Variation, AddOn } from '../types';
 import MenuItemCard from './MenuItemCard';
 import { useRestaurantMenu } from '../hooks/useRestaurantMenu';
 import RestaurantRating from './RestaurantRating';
@@ -10,7 +10,7 @@ interface RestaurantMenuProps {
   restaurant: Restaurant;
   cartItems: CartItem[];
   onBack: () => void;
-  onAddToCart: (item: MenuItem, quantity?: number, variation?: any, addOns?: any[]) => void;
+  onAddToCart: (item: MenuItem, quantity?: number, variation?: Variation, addOns?: AddOn[]) => void;
   updateQuantity: (id: string, quantity: number) => void;
 }
 

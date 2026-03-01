@@ -11,7 +11,10 @@ const SiteSettingsManager: React.FC = () => {
     site_name: '',
     site_description: '',
     currency: '',
-    currency_code: ''
+    currency_code: '',
+    service_food_visible: true,
+    service_pabili_visible: true,
+    service_padala_visible: true,
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
@@ -22,7 +25,10 @@ const SiteSettingsManager: React.FC = () => {
         site_name: siteSettings.site_name,
         site_description: siteSettings.site_description,
         currency: siteSettings.currency,
-        currency_code: siteSettings.currency_code
+        currency_code: siteSettings.currency_code,
+        service_food_visible: siteSettings.service_food_visible,
+        service_pabili_visible: siteSettings.service_pabili_visible,
+        service_padala_visible: siteSettings.service_padala_visible,
       });
       setLogoPreview(siteSettings.site_logo);
     }
@@ -54,7 +60,7 @@ const SiteSettingsManager: React.FC = () => {
       
       // Upload new logo if selected
       if (logoFile) {
-        const uploadedUrl = await uploadImage(logoFile, 'site-logo');
+        const uploadedUrl = await uploadImage(logoFile);
         logoUrl = uploadedUrl;
       }
 
@@ -64,8 +70,11 @@ const SiteSettingsManager: React.FC = () => {
         site_description: formData.site_description,
         currency: formData.currency,
         currency_code: formData.currency_code,
-        site_logo: logoUrl
-      });
+        site_logo: logoUrl,
+        service_food_visible: String(formData.service_food_visible),
+        service_padala_visible: String(formData.service_padala_visible),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
 
       setIsEditing(false);
       setLogoFile(null);
@@ -80,7 +89,10 @@ const SiteSettingsManager: React.FC = () => {
         site_name: siteSettings.site_name,
         site_description: siteSettings.site_description,
         currency: siteSettings.currency,
-        currency_code: siteSettings.currency_code
+        currency_code: siteSettings.currency_code,
+        service_food_visible: siteSettings.service_food_visible,
+        service_pabili_visible: siteSettings.service_pabili_visible,
+        service_padala_visible: siteSettings.service_padala_visible,
       });
       setLogoPreview(siteSettings.site_logo);
     }
@@ -248,6 +260,46 @@ const SiteSettingsManager: React.FC = () => {
             ) : (
               <p className="text-lg font-medium text-black">{siteSettings?.currency_code}</p>
             )}
+          </div>
+        </div>
+
+        {/* Service Visibility */}
+        <div className="border-t border-gray-200 pt-6">
+          <h3 className="text-lg font-semibold text-black mb-1">Service Visibility</h3>
+          <p className="text-sm text-gray-500 mb-4">Toggle which services are visible on the customer-facing selection page.</p>
+          <div className="space-y-4">
+            {[
+              { key: 'service_food_visible' as const, label: 'Food', icon: '🍔', desc: 'Order from restaurants' },
+              { key: 'service_pabili_visible' as const, label: 'Pabili', icon: '🛒', desc: 'Grocery / Pabili service' },
+              { key: 'service_padala_visible' as const, label: 'Padala', icon: '📦', desc: 'Padala delivery service' },
+            ].map(service => {
+              const isVisible = formData[service.key] ?? true;
+              return (
+                <div key={service.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl">{service.icon}</span>
+                    <div>
+                      <p className="font-medium text-gray-900">{service.label}</p>
+                      <p className="text-sm text-gray-500">{service.desc}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!isEditing}
+                    onClick={() => setFormData(prev => ({ ...prev, [service.key]: !isVisible }))}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                      !isEditing ? 'opacity-60 cursor-not-allowed' : ''
+                    } ${isVisible ? 'bg-green-600' : 'bg-gray-300'}`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        isVisible ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

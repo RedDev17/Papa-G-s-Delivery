@@ -32,7 +32,7 @@ const GroceryManager: React.FC<GroceryManagerProps> = ({ onBack }) => {
     if (categories.length > 0 && !formData.category && currentView === 'add') {
       setFormData(prev => ({ ...prev, category: categories[0].id }));
     }
-  }, [categories, currentView]);
+  }, [categories, currentView, formData.category]);
 
   useEffect(() => {
     fetchGroceries();
@@ -105,9 +105,9 @@ const GroceryManager: React.FC<GroceryManagerProps> = ({ onBack }) => {
       setCurrentView('list');
       setEditingGrocery(null);
       resetForm();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving grocery:', error);
-      const errorMessage = error?.message || 'Failed to save grocery. Please check your database connection and try again.';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save grocery. Please check your database connection and try again.';
       alert(`Error: ${errorMessage}`);
     }
   };

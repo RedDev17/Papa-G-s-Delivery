@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Loader2, Navigation, Building2, Home, Landmark, Store, ChefHat } from 'lucide-react';
+import { MapPin, Loader2, Navigation, Building2, Home, Landmark, Store, ChefHat, Star } from 'lucide-react';
 import { useGoogleMaps } from '../hooks/useGoogleMaps';
 import { useOpenStreetMap } from '../hooks/useOpenStreetMap';
+import { useCustomLocations } from '../hooks/useCustomLocations';
 
 // Search cache to prevent repeated API calls for the same query
-const searchCache = new Map<string, Array<{ label: string; value: { lat: number; lng: number }; raw?: unknown }>>();
+const searchCache = new Map<string, Array<{ label: string; value: { lat: number; lng: number }; raw?: unknown; isCustom?: boolean }>>();
+
+interface SuggestionItem {
+  label: string;
+  value: { lat: number; lng: number };
+  raw?: unknown;
+  isCustom?: boolean;
+}
 
 interface AddressAutocompleteProps {
   value: string;
@@ -27,19 +35,21 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   name,
   className
 }) => {
-  const [suggestions, setSuggestions] = useState<Array<{ label: string; value: { lat: number; lng: number }; raw?: unknown }>>([]);
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { searchAddressOSM } = useGoogleMaps();
   const { reverseGeocode } = useOpenStreetMap();
+  const { searchLocations } = useCustomLocations();
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   
   // Track the last searched value to prevent duplicate searches
   const lastSearchedRef = useRef<string>('');
-  // Store the search function in a ref to avoid dependency issues
   const searchFnRef = useRef(searchAddressOSM);
   searchFnRef.current = searchAddressOSM;
+  const searchLocationsRef = useRef(searchLocations);
+  searchLocationsRef.current = searchLocations;
 
   // Get appropriate icon based on location type from Nominatim
   const getLocationIcon = useCallback((raw?: unknown) => {
@@ -86,6 +96,9 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     return <MapPin className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />;
   }, []);
 
+  // Custom location star icon
+  const customLocationIcon = <Star className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0 fill-yellow-500" />;
+
   // Handle outside click to close suggestions
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -122,10 +135,18 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     
     const timer = setTimeout(async () => {
       try {
-        const results = await searchFnRef.current(value);
-        // Cache the results
-        searchCache.set(cacheKey, results);
-        setSuggestions(results);
+        // Search custom locations first (instant, local)
+        const customResults = searchLocationsRef.current(value);
+        
+        // Then search OSM
+        const osmResults = await searchFnRef.current(value);
+        
+        // Merge: custom locations first, then OSM results
+        const merged = [...customResults, ...osmResults];
+        
+        // Cache the merged results
+        searchCache.set(cacheKey, merged);
+        setSuggestions(merged);
         lastSearchedRef.current = value;
       } catch (error) {
         console.error('Search error:', error);
@@ -229,7 +250,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
               onClick={() => handleSelect(suggestion)}
               className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors flex items-start gap-3"
             >
-              {getLocationIcon(suggestion.raw)}
+              {suggestion.isCustom ? customLocationIcon : getLocationIcon(suggestion.raw)}
               <span className="text-sm text-gray-700">{suggestion.label}</span>
             </button>
           ))}

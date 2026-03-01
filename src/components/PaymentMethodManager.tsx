@@ -23,7 +23,7 @@ const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({ onBack }) =
 
   React.useEffect(() => {
     refetchAll();
-  }, []);
+  }, [refetchAll]);
 
   const handleAddMethod = () => {
     const nextSortOrder = Math.max(...paymentMethods.map(m => m.sort_order), 0) + 1;

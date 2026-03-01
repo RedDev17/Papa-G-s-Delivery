@@ -57,7 +57,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
     if (paymentMethods.length > 0 && !paymentMethod) {
       setPaymentMethod(paymentMethods[0].id as PaymentMethod);
     }
-  }, [paymentMethods]);
+  }, [paymentMethods, paymentMethod]);
 
 
 
@@ -170,7 +170,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
       setIsWithinArea(null);
       setAreaCheckError(null);
     }
-  }, [address, calculateDistance, calculateDeliveryFee, isWithinDeliveryArea]);
+  }, [address, calculateDistance, calculateDeliveryFee, isWithinDeliveryArea, restaurantLocation]);
 
   // Calculate total price including delivery fee
   const finalTotalPrice = React.useMemo(() => {

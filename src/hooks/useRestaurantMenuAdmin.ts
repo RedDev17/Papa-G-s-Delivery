@@ -58,12 +58,12 @@ export const useRestaurantMenuAdmin = (restaurantId: string | null) => {
           discountActive: item.discount_active || false,
           effectivePrice,
           isOnDiscount: isDiscountActive,
-          variations: item.variations?.map(v => ({
+          variations: item.variations?.map((v: {id: string, name: string, price: number}) => ({
             id: v.id,
             name: v.name,
             price: v.price
           })) || [],
-          addOns: item.add_ons?.map(a => ({
+          addOns: item.add_ons?.map((a: {id: string, name: string, price: number, category: string}) => ({
             id: a.id,
             name: a.name,
             price: a.price,
@@ -168,6 +168,7 @@ export const useRestaurantMenuAdmin = (restaurantId: string | null) => {
   const updateMenuItem = async (id: string, updates: Partial<RestaurantMenuItem>) => {
     try {
       // Prepare update data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateData: any = {};
       
       if (updates.name !== undefined) updateData.name = updates.name.trim();

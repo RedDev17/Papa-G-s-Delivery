@@ -88,6 +88,7 @@ export const useRestaurantsAdmin = () => {
 
   const updateRestaurant = async (id: string, updates: Partial<Restaurant>) => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateData: any = {};
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.type !== undefined) updateData.type = updates.type;

@@ -72,6 +72,9 @@ export interface SiteSettings {
   site_description: string;
   currency: string;
   currency_code: string;
+  service_food_visible: boolean;
+  service_pabili_visible: boolean;
+  service_padala_visible: boolean;
 }
 
 // Restaurant Types
@@ -165,6 +168,18 @@ export interface Request {
   address?: string;
   status: 'pending' | 'in_progress' | 'resolved' | 'cancelled';
   admin_notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Custom Location (admin-managed address suggestions)
+export interface CustomLocation {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  active: boolean;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }

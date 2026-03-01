@@ -56,6 +56,17 @@ const normalizePhilippineAddress = (address: string): string => {
   return normalized;
 };
 
+// Moved outside the hook to avoid exhaustive-deps warning
+type ServiceType = 'food' | 'padala' | 'pabili';
+
+interface ServiceSettings {
+  baseFee: number;
+  perKmFee: number;
+  baseDistance: number;
+}
+
+const defaultServiceSettings: ServiceSettings = { baseFee: 60, perKmFee: 13, baseDistance: 3 };
+
 export const useGoogleMaps = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,18 +75,6 @@ export const useGoogleMaps = () => {
     lat: DELIVERY_CENTER.lat,
     lng: DELIVERY_CENTER.lng
   });
-  
-  // Service-specific delivery settings
-  type ServiceType = 'food' | 'padala' | 'pabili';
-  
-  interface ServiceSettings {
-    baseFee: number;
-    perKmFee: number;
-    baseDistance: number;
-  }
-  
-  const defaultServiceSettings: ServiceSettings = { baseFee: 60, perKmFee: 13, baseDistance: 3 };
-  
   const [deliverySettings, setDeliverySettings] = useState<Record<ServiceType, ServiceSettings>>({
     food: { ...defaultServiceSettings },
     padala: { ...defaultServiceSettings },
@@ -107,6 +106,7 @@ export const useGoogleMaps = () => {
             pabili: { ...defaultServiceSettings }
           };
           
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data.forEach((item: any) => {
             const value = parseFloat(item.value);
             // Food delivery (original settings)
@@ -151,6 +151,7 @@ export const useGoogleMaps = () => {
   };
 
   // Search for address suggestions (for autocomplete)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const searchAddressOSM = async (query: string): Promise<Array<{ label: string; value: { lat: number; lng: number }; raw: any }>> => {
     try {
       if (!query || query.length < 3) return [];
@@ -168,6 +169,7 @@ export const useGoogleMaps = () => {
 
       const data = await response.json();
       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return data.map((item: any) => ({
         label: item.display_name,
         value: {
@@ -305,6 +307,7 @@ export const useGoogleMaps = () => {
   }, []);
 
   // Calculate distance using Google Maps Distance Matrix API (if key is provided)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const calculateDistanceGoogle = async (destinationAddress: string): Promise<DistanceResult | null> => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     

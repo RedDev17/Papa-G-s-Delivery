@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Save, X, ArrowLeft, Coffee, TrendingUp, Package, Lock, FolderOpen, CreditCard, Settings } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, ArrowLeft, Coffee, TrendingUp, Package, Lock, FolderOpen, CreditCard, Settings, MapPin } from 'lucide-react';
 import { MenuItem, Variation, AddOn } from '../types';
 import { addOnCategories } from '../data/menuData';
 import { useMenu } from '../hooks/useMenu';
@@ -11,6 +11,7 @@ import PaymentMethodManager from './PaymentMethodManager';
 import SiteSettingsManager from './SiteSettingsManager';
 import RestaurantManager from './RestaurantManager';
 import DeliveryFeeManager from './DeliveryFeeManager';
+import LocationManager from './LocationManager';
 
 const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -21,7 +22,7 @@ const AdminDashboard: React.FC = () => {
   const { menuItems, loading, updateMenuItem, deleteMenuItem } = useMenu();
   const { categories } = useCategories();
   const { restaurants: adminRestaurants } = useRestaurantsAdmin();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'items' | 'edit' | 'categories' | 'payments' | 'settings' | 'restaurants' | 'delivery-fees'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'items' | 'edit' | 'categories' | 'payments' | 'settings' | 'restaurants' | 'delivery-fees' | 'locations'>('dashboard');
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -49,7 +50,7 @@ const AdminDashboard: React.FC = () => {
       try {
         setIsProcessing(true);
         await deleteMenuItem(id);
-      } catch (_error) {
+      } catch {
         alert('Failed to delete item. Please try again.');
       } finally {
         setIsProcessing(false);
@@ -69,7 +70,7 @@ const AdminDashboard: React.FC = () => {
         setCurrentView('items');
         setEditingItem(null);
       }
-    } catch (_error) {
+    } catch {
       alert('Failed to save item');
     }
   };
@@ -104,7 +105,7 @@ const AdminDashboard: React.FC = () => {
         setSelectedItems([]);
         setShowBulkActions(false);
         alert(`Successfully deleted ${selectedItems.length} item(s).`);
-      } catch (_error) {
+      } catch {
         alert('Failed to delete some items. Please try again.');
       } finally {
         setIsProcessing(false);
@@ -131,7 +132,7 @@ const AdminDashboard: React.FC = () => {
         setSelectedItems([]);
         setShowBulkActions(false);
         alert(`Successfully updated category for ${selectedItems.length} item(s)`);
-      } catch (_error) {
+      } catch {
         alert('Failed to update some items');
       } finally {
         setIsProcessing(false);
@@ -914,6 +915,11 @@ const AdminDashboard: React.FC = () => {
     return <RestaurantManager onBack={() => setCurrentView('dashboard')} />;
   }
 
+  // Locations View
+  if (currentView === 'locations') {
+    return <LocationManager onBack={() => setCurrentView('dashboard')} />;
+  }
+
   // Delivery Fees View
   if (currentView === 'delivery-fees') {
     return (
@@ -1026,7 +1032,16 @@ const AdminDashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="text-lg font-playfair font-medium text-black mb-4">Quick Actions</h3>
-            <div className="space-y-3">
+            <div className="space-y-1">
+              {/* Content Management */}
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 pt-2 pb-1">Content</p>
+              <button
+                onClick={() => setCurrentView('restaurants')}
+                className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors duration-200"
+              >
+                <Coffee className="h-5 w-5 text-gray-400" />
+                <span className="font-medium text-gray-900">Manage Restaurants</span>
+              </button>
               <button
                 onClick={() => setCurrentView('items')}
                 className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors duration-200"
@@ -1041,13 +1056,26 @@ const AdminDashboard: React.FC = () => {
                 <FolderOpen className="h-5 w-5 text-gray-400" />
                 <span className="font-medium text-gray-900">Manage Categories</span>
               </button>
+
+              {/* Delivery & Locations */}
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 pt-4 pb-1">Delivery</p>
               <button
-                onClick={() => setCurrentView('restaurants')}
+                onClick={() => setCurrentView('locations')}
                 className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors duration-200"
               >
-                <Coffee className="h-5 w-5 text-gray-400" />
-                <span className="font-medium text-gray-900">Manage Restaurants</span>
+                <MapPin className="h-5 w-5 text-gray-400" />
+                <span className="font-medium text-gray-900">Manage Locations</span>
               </button>
+              <button
+                onClick={() => setCurrentView('delivery-fees')}
+                className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors duration-200"
+              >
+                <TrendingUp className="h-5 w-5 text-gray-400" />
+                <span className="font-medium text-gray-900">Delivery Fees</span>
+              </button>
+
+              {/* Settings */}
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 pt-4 pb-1">Settings</p>
               <button
                 onClick={() => setCurrentView('payments')}
                 className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors duration-200"
@@ -1061,13 +1089,6 @@ const AdminDashboard: React.FC = () => {
               >
                 <Settings className="h-5 w-5 text-gray-400" />
                 <span className="font-medium text-gray-900">Site Settings</span>
-              </button>
-              <button
-                onClick={() => setCurrentView('delivery-fees')}
-                className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors duration-200"
-              >
-                <TrendingUp className="h-5 w-5 text-gray-400" />
-                <span className="font-medium text-gray-900">Delivery Fees</span>
               </button>
             </div>
           </div>

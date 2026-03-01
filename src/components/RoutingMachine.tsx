@@ -7,7 +7,7 @@ import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 interface RoutingMachineProps {
   restaurantLocation: { lat: number; lng: number };
   customerLocation: { lat: number; lng: number };
-  lineOptions?: any; // Allow custom line options
+  lineOptions?: Record<string, unknown>; // Allow custom line options
 }
 
 const RoutingMachine = ({ restaurantLocation, customerLocation, lineOptions }: RoutingMachineProps) => {
@@ -16,7 +16,8 @@ const RoutingMachine = ({ restaurantLocation, customerLocation, lineOptions }: R
   useEffect(() => {
     if (!map) return;
 
-    const routingControl = L.Routing.control({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const routingControl = (L as any).Routing.control({
       waypoints: [
         L.latLng(restaurantLocation.lat, restaurantLocation.lng),
         L.latLng(customerLocation.lat, customerLocation.lng)
