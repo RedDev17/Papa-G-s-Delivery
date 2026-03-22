@@ -22,8 +22,10 @@ export default {
         },
       },
       fontFamily: {
-        'pretendard': ['Pretendard', 'system-ui', 'sans-serif'],
-        'noto-kr': ['Noto Serif KR', 'serif']
+        'pretendard': ['Inter', 'system-ui', 'sans-serif'],
+        'noto-kr': ['Noto Serif KR', 'serif'],
+        'inter': ['Inter', 'system-ui', 'sans-serif'],
+        'noto': ['Noto Serif KR', 'serif']
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

@@ -5,6 +5,7 @@ import { usePaymentMethods } from '../hooks/usePaymentMethods';
 import { useGoogleMaps } from '../hooks/useGoogleMaps';
 import { useOpenStreetMap } from '../hooks/useOpenStreetMap';
 import { useRestaurants } from '../hooks/useRestaurants';
+import { rateLimitedFetch } from '../lib/nominatimRateLimiter';
 import DeliveryMap from './DeliveryMap';
 import AddressAutocomplete from './AddressAutocomplete';
 
@@ -20,16 +21,27 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
   const { calculateDistance, calculateDeliveryFee, isWithinDeliveryArea, restaurantLocation: defaultRestaurantLocation, maxDeliveryRadius } = useGoogleMaps();
   const { reverseGeocode } = useOpenStreetMap();
   
-  // Get the restaurant from the first cart item
-  const currentRestaurantId = cartItems.length > 0 ? cartItems[0].restaurantId : null;
-  const currentRestaurant = restaurants.find(r => r.id === currentRestaurantId);
-  
-  // Use restaurant location if available, otherwise default
-  const restaurantLocation = React.useMemo(() => {
-    return currentRestaurant?.latitude && currentRestaurant?.longitude
-      ? { lat: currentRestaurant.latitude, lng: currentRestaurant.longitude }
+  // Group cart items by restaurant
+  const itemsByRestaurant = React.useMemo(() => {
+    const groups: { [key: string]: CartItem[] } = {};
+    cartItems.forEach(item => {
+      const restId = item.restaurantId || 'unknown';
+      if (!groups[restId]) groups[restId] = [];
+      groups[restId].push(item);
+    });
+    return groups;
+  }, [cartItems]);
+
+  // Get unique restaurant IDs from cart
+  const restaurantIds = React.useMemo(() => Object.keys(itemsByRestaurant), [itemsByRestaurant]);
+
+  // Get restaurant location by ID (with fallback to default)
+  const getRestaurantLocation = React.useCallback((restId: string) => {
+    const rest = restaurants.find(r => r.id === restId);
+    return rest?.latitude && rest?.longitude
+      ? { lat: rest.latitude, lng: rest.longitude }
       : defaultRestaurantLocation;
-  }, [currentRestaurant, defaultRestaurantLocation]);
+  }, [restaurants, defaultRestaurantLocation]);
 
   const [step, setStep] = useState<'details' | 'payment'>('details');
   const [customerName, setCustomerName] = useState('');
@@ -38,15 +50,34 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
   const [landmark, setLandmark] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('gcash');
   const [notes, setNotes] = useState('');
-  // Delivery fee calculation
-  const [distance, setDistance] = useState<number | null>(null);
-  const [deliveryFee, setDeliveryFee] = useState<number>(60); // Default base fee
+  // Per-restaurant delivery fee calculation
+  const [restaurantFees, setRestaurantFees] = useState<Record<string, { distance: number | null; fee: number }>>({});
   const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
   const [customerLocation, setCustomerLocation] = useState<{ lat: number; lng: number } | null>(null);
   // Delivery area validation
   const [isWithinArea, setIsWithinArea] = useState<boolean | null>(null);
   const [areaCheckError, setAreaCheckError] = useState<string | null>(null);
   const [debouncedAddress, setDebouncedAddress] = useState('');
+  // Flag to skip address re-geocoding when location was selected by exact coordinates (GPS/map/autocomplete)
+  const locationSelectedByCoords = React.useRef(false);
+
+  // Computed total delivery fee (sum of all restaurant fees, with fallback base fee)
+  const totalDeliveryFee = React.useMemo(() => {
+    return restaurantIds.reduce((sum, restId) => {
+      const feeInfo = restaurantFees[restId];
+      return sum + (feeInfo?.fee ?? calculateDeliveryFee(null));
+    }, 0);
+  }, [restaurantIds, restaurantFees, calculateDeliveryFee]);
+
+  // Memoize map props so DeliveryMap doesn't re-render on unrelated keystrokes
+  const mapRestaurantLocation = React.useMemo(
+    () => getRestaurantLocation(restaurantIds[0] || ''),
+    [getRestaurantLocation, restaurantIds]
+  );
+  const mapDistance = React.useMemo(
+    () => restaurantFees[restaurantIds[0]]?.distance ?? null,
+    [restaurantFees, restaurantIds]
+  );
 
   React.useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -63,6 +94,8 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
 
   // Handle location selection from map
   const handleLocationSelect = React.useCallback(async (lat: number, lng: number) => {
+    // Mark that we already have exact coordinates — skip forward-geocoding in the address useEffect
+    locationSelectedByCoords.current = true;
     setCustomerLocation({ lat, lng });
     
     // Get address from coordinates
@@ -72,23 +105,32 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
       // Update debounced address immediately when selecting from map
       setDebouncedAddress(newAddress);
       
-      // Trigger distance calculation
+      // Trigger distance calculation for each restaurant
       setIsCalculatingDistance(true);
-      const result = await calculateDistance(`${lat},${lng}`, restaurantLocation);
-      if (result) {
-        setDistance(result.distance);
-        const fee = calculateDeliveryFee(result.distance);
-        setDeliveryFee(fee);
-        setIsWithinArea(true);
-      } else {
-        // If distance calculation fails, it might be too far
-        setIsWithinArea(false);
+      const newFees: Record<string, { distance: number | null; fee: number }> = {};
+      let allWithinArea = true;
+      
+      for (const restId of restaurantIds) {
+        const restLocation = getRestaurantLocation(restId);
+        const result = await calculateDistance(`${lat},${lng}`, restLocation);
+        if (result) {
+          newFees[restId] = {
+            distance: result.distance,
+            fee: calculateDeliveryFee(result.distance)
+          };
+        } else {
+          allWithinArea = false;
+          newFees[restId] = { distance: null, fee: calculateDeliveryFee(null) };
+        }
       }
+      
+      setRestaurantFees(newFees);
+      setIsWithinArea(allWithinArea);
       setIsCalculatingDistance(false);
     }
-  }, [reverseGeocode, calculateDistance, calculateDeliveryFee, restaurantLocation]);
+  }, [reverseGeocode, calculateDistance, calculateDeliveryFee, restaurantIds, getRestaurantLocation]);
 
-  // Calculate distance and delivery fee when address changes
+  // Calculate distance and delivery fee when address changes — per restaurant
   React.useEffect(() => {
     if (address.trim()) {
       const timeoutId = setTimeout(async () => {
@@ -96,8 +138,8 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
         setIsCalculatingDistance(true);
         setAreaCheckError(null);
         
-        // First check if address is within delivery area
-        const areaCheck = await isWithinDeliveryArea(address, restaurantLocation);
+        // Check if address is within delivery area (use default location for area check)
+        const areaCheck = await isWithinDeliveryArea(address, defaultRestaurantLocation);
         setIsWithinArea(areaCheck.within);
         
         if (areaCheck.error) {
@@ -106,76 +148,85 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
         
         // Only calculate distance and fee if address is within delivery area
         if (areaCheck.within) {
-          const result = await calculateDistance(address, restaurantLocation);
-          if (result) {
-            setDistance(result.distance);
-            const fee = calculateDeliveryFee(result.distance);
-            setDeliveryFee(fee);
-          } else {
-            setDistance(null);
-            setDeliveryFee(60);
+          // Calculate delivery fee for EACH restaurant separately
+          const newFees: Record<string, { distance: number | null; fee: number }> = {};
+          
+          for (const restId of restaurantIds) {
+            const restLocation = getRestaurantLocation(restId);
+            const result = await calculateDistance(address, restLocation);
+            if (result) {
+              newFees[restId] = {
+                distance: result.distance,
+                fee: calculateDeliveryFee(result.distance)
+              };
+            } else {
+              newFees[restId] = { distance: null, fee: calculateDeliveryFee(null) };
+            }
           }
           
+          setRestaurantFees(newFees);
+          
           // Get coordinates for the address to show on map
-          // Normalize address to fix common typos (pangpaga -> Pampanga, etc.)
-          try {
-            let normalizedAddress = address.trim();
-            // Fix common typos
-            normalizedAddress = normalizedAddress.replace(/\bpangpaga\b/gi, 'Pampanga');
-            normalizedAddress = normalizedAddress.replace(/\bpampanga\b/gi, 'Pampanga');
-            normalizedAddress = normalizedAddress.replace(/\bbrgy\b/gi, 'Barangay');
-            normalizedAddress = normalizedAddress.replace(/\bbgy\b/gi, 'Barangay');
-            normalizedAddress = normalizedAddress.replace(/\bpurok\b/gi, 'Purok');
-            normalizedAddress = normalizedAddress.replace(/\bblk\b/gi, 'Block');
-            normalizedAddress = normalizedAddress.replace(/\bfloridablanca\b/gi, 'Floridablanca');
-            
-            // Check if address contains a Plus Code pattern
-            const hasPlusCode = /[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}/i.test(normalizedAddress);
-            const fullAddress = hasPlusCode || normalizedAddress.includes('Pampanga') || normalizedAddress.includes('Philippines') 
-              ? normalizedAddress 
-              : `${normalizedAddress}, Pampanga, Philippines`;
-            
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1&countrycodes=ph`,
-              {
-                headers: {
-                  'User-Agent': 'E-Run-Delivery-App'
+          // Skip if location was already set by exact coordinates (GPS/map click/autocomplete)
+          if (locationSelectedByCoords.current) {
+            locationSelectedByCoords.current = false;
+          } else {
+            try {
+              let normalizedAddress = address.trim();
+              normalizedAddress = normalizedAddress.replace(/\bpangpaga\b/gi, 'Pampanga');
+              normalizedAddress = normalizedAddress.replace(/\bpampanga\b/gi, 'Pampanga');
+              normalizedAddress = normalizedAddress.replace(/\bbrgy\b/gi, 'Barangay');
+              normalizedAddress = normalizedAddress.replace(/\bbgy\b/gi, 'Barangay');
+              normalizedAddress = normalizedAddress.replace(/\bpurok\b/gi, 'Purok');
+              normalizedAddress = normalizedAddress.replace(/\bblk\b/gi, 'Block');
+              normalizedAddress = normalizedAddress.replace(/\bfloridablanca\b/gi, 'Floridablanca');
+              
+              const hasPlusCode = /[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}/i.test(normalizedAddress);
+              const fullAddress = hasPlusCode || normalizedAddress.includes('Pampanga') || normalizedAddress.includes('Philippines') 
+                ? normalizedAddress 
+                : `${normalizedAddress}, Pampanga, Philippines`;
+              
+              const response = await rateLimitedFetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1&countrycodes=ph`,
+                {
+                  headers: {
+                    'User-Agent': 'PapaGsDelivery/1.0'
+                  }
                 }
+              );
+              const data = await response.json();
+              if (data && data.length > 0) {
+                setCustomerLocation({
+                  lat: parseFloat(data[0].lat),
+                  lng: parseFloat(data[0].lon)
+                });
               }
-            );
-            const data = await response.json();
-            if (data && data.length > 0) {
-              setCustomerLocation({
-                lat: parseFloat(data[0].lat),
-                lng: parseFloat(data[0].lon)
-              });
+            } catch (err) {
+              console.error('Geocoding error:', err);
             }
-          } catch (err) {
-            console.error('Geocoding error:', err);
           }
         } else {
           // Address is outside delivery area
-          setDistance(null);
-          setDeliveryFee(0);
+          setRestaurantFees({});
           setCustomerLocation(null);
         }
         setIsCalculatingDistance(false);
-      }, 1000); // Debounce for 1 second
+      }, 1000);
 
       return () => clearTimeout(timeoutId);
     } else {
-      setDistance(null);
-      setDeliveryFee(60);
+      setRestaurantFees({});
       setCustomerLocation(null);
       setIsWithinArea(null);
       setAreaCheckError(null);
     }
-  }, [address, calculateDistance, calculateDeliveryFee, isWithinDeliveryArea, restaurantLocation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address, calculateDistance, calculateDeliveryFee, isWithinDeliveryArea, restaurantIds.join(',')]);
 
-  // Calculate total price including delivery fee
+  // Calculate total price including all delivery fees
   const finalTotalPrice = React.useMemo(() => {
-    return totalPrice + deliveryFee;
-  }, [totalPrice, deliveryFee]);
+    return totalPrice + totalDeliveryFee;
+  }, [totalPrice, totalDeliveryFee]);
 
   const selectedPaymentMethod = paymentMethods.find(method => method.id === paymentMethod);
 
@@ -185,8 +236,17 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
 
   const handlePlaceOrder = () => {
     const googleMapsLink = customerLocation 
-      ? `https://www.google.com/maps/search/?api=1&query=${customerLocation.lat},${customerLocation.lng}`
+      ? `https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lng}`
       : '';
+
+    // Build per-restaurant delivery fee breakdown for messenger
+    const deliveryFeeBreakdown = Object.entries(itemsByRestaurant).map(([restId]) => {
+      const restaurantName = restaurants.find(r => r.id === restId)?.name || 'Papa G\'s Delivery';
+      const feeInfo = restaurantFees[restId];
+      const fee = feeInfo?.fee ?? calculateDeliveryFee(null);
+      const dist = feeInfo?.distance;
+      return `  🏪 ${restaurantName}: ₱${fee.toFixed(2)}${dist !== null && dist !== undefined ? ` (${dist} km)` : ''}`;
+    }).join('\n');
 
     const orderDetails = `
 🛒 Papa G's Delivery ORDER
@@ -199,19 +259,7 @@ ${googleMapsLink ? `📍 Map Location: ${googleMapsLink}` : ''}
 
 
 📋 ORDER DETAILS:
-${(() => {
-  // Group items by restaurant
-  const itemsByRestaurant: { [key: string]: CartItem[] } = {};
-  cartItems.forEach(item => {
-    const restId = item.restaurantId || 'unknown';
-    if (!itemsByRestaurant[restId]) {
-      itemsByRestaurant[restId] = [];
-    }
-    itemsByRestaurant[restId].push(item);
-  });
-
-  // Format message
-  return Object.entries(itemsByRestaurant).map(([restId, items]) => {
+${Object.entries(itemsByRestaurant).map(([restId, items]) => {
     const restaurantName = restaurants.find(r => r.id === restId)?.name || 'Papa G\'s Delivery';
     
     const itemsList = items.map(item => {
@@ -231,11 +279,12 @@ ${(() => {
     }).join('\n');
 
     return `🏪 ${restaurantName.toUpperCase()}\n${itemsList}`;
-  }).join('\n\n');
-})()}
+  }).join('\n\n')}
 
 💰 Subtotal: ₱${totalPrice}
-🛵 Delivery Fee: ₱${deliveryFee.toFixed(2)}${distance !== null ? ` (${distance} km)` : ''}
+🛵 Delivery Fees:
+${deliveryFeeBreakdown}
+🛵 Total Delivery Fee: ₱${totalDeliveryFee.toFixed(2)}
 💰 TOTAL: ₱${finalTotalPrice.toFixed(2)}
 
 ⚠️ Notice: The price will be different at the store or restaurant.
@@ -277,13 +326,9 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
             <h2 className="text-2xl font-noto font-medium text-black mb-6">Order Summary</h2>
             
             <div className="space-y-6 mb-6">
-              {Object.entries(cartItems.reduce((acc, item) => {
-                const restId = item.restaurantId || 'unknown';
-                if (!acc[restId]) acc[restId] = [];
-                acc[restId].push(item);
-                return acc;
-              }, {} as { [key: string]: CartItem[] })).map(([restId, items]) => {
+              {Object.entries(itemsByRestaurant).map(([restId, items]) => {
                 const restaurantName = restaurants.find(r => r.id === restId)?.name || 'Papa G\'s Delivery';
+                const feeInfo = restaurantFees[restId];
                 
                 return (
                   <div key={restId} className="border border-gray-100 rounded-lg overflow-hidden">
@@ -310,6 +355,22 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                         </div>
                       ))}
                     </div>
+                    {/* Per-restaurant delivery fee */}
+                    <div className="bg-green-50 px-4 py-2 border-t border-gray-100 flex items-center justify-between">
+                      <span className="text-sm text-gray-600 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        Delivery Fee
+                        {isCalculatingDistance && (
+                          <span className="text-xs text-gray-500 ml-1">(calculating...)</span>
+                        )}
+                        {feeInfo?.distance !== null && feeInfo?.distance !== undefined && !isCalculatingDistance && (
+                          <span className="text-xs text-gray-500 ml-1">({feeInfo.distance} km)</span>
+                        )}
+                      </span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        ₱{(feeInfo?.fee ?? calculateDeliveryFee(null)).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -323,15 +384,12 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600 flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
-                  Total Delivery Fee:
+                  Total Delivery Fee{restaurantIds.length > 1 ? ` (${restaurantIds.length} restaurants)` : ''}:
                   {isCalculatingDistance && (
                     <span className="text-xs text-gray-500 ml-1">(calculating...)</span>
                   )}
-                  {distance !== null && !isCalculatingDistance && (
-                    <span className="text-xs text-gray-500 ml-1">({distance} km)</span>
-                  )}
                 </span>
-                <span className="text-gray-900 font-semibold">₱{deliveryFee.toFixed(2)}</span>
+                <span className="text-gray-900 font-semibold">₱{totalDeliveryFee.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between text-2xl font-noto font-semibold text-black pt-2 border-t border-gray-200">
                 <span>Total:</span>
@@ -377,8 +435,8 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                   {isCalculatingDistance && (
                     <span className="ml-2 text-xs text-gray-500">Checking delivery area...</span>
                   )}
-                  {isWithinArea === true && distance !== null && !isCalculatingDistance && (
-                    <span className="ml-2 text-xs text-green-600">✓ Within area • Distance: {distance} km</span>
+                  {isWithinArea === true && restaurantFees[restaurantIds[0]]?.distance != null && !isCalculatingDistance && (
+                    <span className="ml-2 text-xs text-green-600">✓ Within area • Distance: {restaurantFees[restaurantIds[0]].distance} km</span>
                   )}
                   {isWithinArea === false && !isCalculatingDistance && (
                     <span className="ml-2 text-xs text-red-600">✗ Outside delivery area</span>
@@ -418,10 +476,11 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                 {(customerLocation || address) && (
                   <div className="mt-4">
                     <DeliveryMap
-                      restaurantLocation={restaurantLocation}
+                      restaurantLocation={mapRestaurantLocation}
                       customerLocation={customerLocation}
-                      distance={distance}
+                      distance={mapDistance}
                       address={debouncedAddress}
+                      onLocationSelect={handleLocationSelect}
                     />
                   </div>
                 )}
@@ -555,13 +614,9 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
               {landmark && <p className="text-sm text-gray-600">Landmark: {landmark}</p>}
             </div>
 
-            {Object.entries(cartItems.reduce((acc, item) => {
-              const restId = item.restaurantId || 'unknown';
-              if (!acc[restId]) acc[restId] = [];
-              acc[restId].push(item);
-              return acc;
-            }, {} as { [key: string]: CartItem[] })).map(([restId, items]) => {
+            {Object.entries(itemsByRestaurant).map(([restId, items]) => {
               const restaurantName = restaurants.find(r => r.id === restId)?.name || 'Papa G\'s Delivery';
+              const feeInfo = restaurantFees[restId];
               
               return (
                 <div key={restId} className="border border-gray-100 rounded-lg overflow-hidden">
@@ -592,6 +647,19 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                       </div>
                     ))}
                   </div>
+                  {/* Per-restaurant delivery fee */}
+                  <div className="bg-green-50 px-4 py-2 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-sm text-gray-600 flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      Delivery Fee
+                      {feeInfo?.distance !== null && feeInfo?.distance !== undefined && (
+                        <span className="text-xs text-gray-500 ml-1">({feeInfo.distance} km)</span>
+                      )}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      ₱{(feeInfo?.fee ?? calculateDeliveryFee(null)).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -605,12 +673,9 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600 flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
-                Delivery Fee:
-                {distance !== null && (
-                  <span className="text-xs text-gray-500 ml-1">({distance} km)</span>
-                )}
+                Total Delivery Fee{restaurantIds.length > 1 ? ` (${restaurantIds.length} restaurants)` : ''}:
               </span>
-              <span className="text-gray-900 font-semibold">₱{deliveryFee.toFixed(2)}</span>
+              <span className="text-gray-900 font-semibold">₱{totalDeliveryFee.toFixed(2)}</span>
             </div>
             <div className="flex items-center justify-between text-2xl font-noto font-semibold text-black pt-2 border-t border-gray-200">
               <span>Total:</span>

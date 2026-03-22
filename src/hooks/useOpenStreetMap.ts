@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { rateLimitedFetch } from '../lib/nominatimRateLimiter';
 
 interface NominatimResult {
   place_id: number;
@@ -29,7 +30,7 @@ export const useOpenStreetMap = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
+      const response = await rateLimitedFetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
         {
           headers: {
@@ -58,7 +59,7 @@ export const useOpenStreetMap = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
+      const response = await rateLimitedFetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5`,
         {
           headers: {

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { rateLimitedFetch, getCachedGeocode, setCachedGeocode } from '../lib/nominatimRateLimiter';
 
 // Delivery center: Floridablanca, Pampanga
 // This is the point from which delivery distance is calculated
@@ -106,8 +107,7 @@ export const useGoogleMaps = () => {
             pabili: { ...defaultServiceSettings }
           };
           
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          data.forEach((item: any) => {
+          data.forEach((item: { id: string; value: string }) => {
             const value = parseFloat(item.value);
             // Food delivery (original settings)
             if (item.id === 'delivery_base_fee') newSettings.food.baseFee = value;
@@ -151,16 +151,15 @@ export const useGoogleMaps = () => {
   };
 
   // Search for address suggestions (for autocomplete)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const searchAddressOSM = async (query: string): Promise<Array<{ label: string; value: { lat: number; lng: number }; raw: any }>> => {
+  const searchAddressOSM = async (query: string): Promise<Array<{ label: string; value: { lat: number; lng: number }; raw: Record<string, unknown> }>> => {
     try {
       if (!query || query.length < 3) return [];
 
-      const response = await fetch(
+      const response = await rateLimitedFetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ph&addressdetails=1`,
         {
           headers: {
-            'User-Agent': 'E-Run-Delivery-App'
+            'User-Agent': 'PapaGsDelivery/1.0'
           }
         }
       );
@@ -169,8 +168,7 @@ export const useGoogleMaps = () => {
 
       const data = await response.json();
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return data.map((item: any) => ({
+      return data.map((item: { display_name: string; lat: string; lon: string }) => ({
         label: item.display_name,
         value: {
           lat: parseFloat(item.lat),
@@ -191,48 +189,49 @@ export const useGoogleMaps = () => {
       // Normalize the address (fix typos, expand abbreviations)
       const normalizedAddress = normalizePhilippineAddress(normalizePlusCodeAddress(address));
       
+      // Check global cache first
+      const cached = getCachedGeocode(normalizedAddress);
+      if (cached !== undefined) return cached;
+      
       // Try multiple address variations for better geocoding success
-      // Prioritize most specific location but allow broader searches
       const addressVariations = [
-        normalizedAddress, // Try exact input first (best for "SM Bacoor", "Luneta")
+        normalizedAddress,
         `${normalizedAddress}, Philippines`,
-        `${normalizedAddress}, Pampanga, Philippines`, // Keep Pampanga bias as fallback/option
+        `${normalizedAddress}, Pampanga, Philippines`,
       ];
       
-      // Remove duplicates
       const uniqueVariations = [...new Set(addressVariations)];
       
-      // Try each variation until one works
       for (const fullAddress of uniqueVariations) {
-        // If address contains a Plus Code, use it as-is (Plus Codes are already precise)
         const searchAddress = containsPlusCode(fullAddress) ? fullAddress : fullAddress;
       
-      // Remove viewbox restriction to allow searching anywhere
-      // We can still use countrycodes=ph to limit to Philippines
-      
-      const response = await fetch(
+      const response = await rateLimitedFetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchAddress)}&limit=1&countrycodes=ph`,
         {
           headers: {
-            'User-Agent': 'E-Run-Delivery-App' // Required by Nominatim
+            'User-Agent': 'PapaGsDelivery/1.0'
           }
         }
       );
       
       if (!response.ok) {
-          continue; // Try next variation
+          continue;
       }
       
       const data = await response.json();
       
       if (data && data.length > 0) {
-        return {
+        const result = {
           lat: parseFloat(data[0].lat),
           lng: parseFloat(data[0].lon)
         };
+        setCachedGeocode(normalizedAddress, result);
+        return result;
         }
       }
       
+      // Cache the miss so we don't re-query
+      setCachedGeocode(normalizedAddress, null);
       return null;
     } catch (err) {
       console.error('OpenStreetMap geocoding error:', err);
@@ -305,39 +304,6 @@ export const useGoogleMaps = () => {
     };
     geocodeDeliveryCenter();
   }, []);
-
-  // Calculate distance using Google Maps Distance Matrix API (if key is provided)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const calculateDistanceGoogle = async (destinationAddress: string): Promise<DistanceResult | null> => {
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    
-    if (!apiKey) {
-      return null;
-    }
-
-    try {
-      // Use delivery center coordinates for distance calculation
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${deliveryCenterCoords.lat},${deliveryCenterCoords.lng}&destinations=${encodeURIComponent(destinationAddress)}&key=${apiKey}&units=metric&region=ph`
-      );
-      const data = await response.json();
-      
-      if (data.status === 'OK' && data.rows[0]?.elements[0]?.status === 'OK') {
-        const element = data.rows[0].elements[0];
-        const distanceInKm = element.distance.value / 1000; // Convert meters to kilometers
-        const duration = element.duration.text;
-        
-        return {
-          distance: Math.round(distanceInKm * 10) / 10, // Round to 1 decimal place
-          duration
-        };
-      }
-    } catch (err) {
-      console.warn('Google Maps API error:', err);
-    }
-    
-    return null;
-  };
 
   // Calculate distance using OSRM (Open Source Routing Machine) - Free and accurate road distance
   const calculateDistanceOSRM = async (origin: { lat: number; lng: number }, destination: { lat: number; lng: number }): Promise<DistanceResult | null> => {

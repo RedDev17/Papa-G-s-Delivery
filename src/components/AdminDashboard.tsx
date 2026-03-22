@@ -223,7 +223,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'PapaGDelivery@Admin!2025') {
+    if (password === (import.meta.env.VITE_ADMIN_PASSWORD || 'PapaGDelivery@Admin!2025')) {
       setIsAuthenticated(true);
       localStorage.setItem('beracah_admin_auth', 'true');
       setLoginError('');

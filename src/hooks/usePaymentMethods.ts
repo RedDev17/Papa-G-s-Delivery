@@ -81,8 +81,7 @@ export const usePaymentMethods = () => {
       }
 
       // Prepare insert data - handle both UUID and text ID schemas
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const insertData: any = {
+      const insertData: Record<string, unknown> = {
         name: method.name,
         account_number: method.account_number,
         account_name: method.account_name,

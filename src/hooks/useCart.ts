@@ -1,9 +1,30 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CartItem, MenuItem, Variation, AddOn } from '../types';
 
+const CART_STORAGE_KEY = 'papa_gs_cart';
+
+function loadCartFromStorage(): CartItem[] {
+  try {
+    const stored = localStorage.getItem(CART_STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {
+    // Corrupted data – ignore
+  }
+  return [];
+}
+
 export const useCart = () => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>(loadCartFromStorage);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // Persist to localStorage whenever cart changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+    } catch {
+      // Storage full or unavailable – ignore
+    }
+  }, [cartItems]);
 
   const calculateItemPrice = (item: MenuItem, variation?: Variation, addOns?: AddOn[]) => {
     // If variation is selected, use ONLY the variation price (it replaces the base price)

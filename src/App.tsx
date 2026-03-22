@@ -14,7 +14,7 @@ import ServiceSelection from './components/ServiceSelection';
 import PadalaBooking from './components/PadalaBooking';
 import Requests from './components/Requests';
 import { useRestaurants } from './hooks/useRestaurants';
-import { Restaurant } from './types';
+import { Restaurant, MenuItem, Variation, AddOn } from './types';
 
 function ServiceSelectionPage() {
   const navigate = useNavigate();
@@ -46,6 +46,53 @@ function FoodService() {
   const [currentView, setCurrentView] = React.useState<'restaurants' | 'restaurant-menu' | 'cart' | 'checkout'>('restaurants');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedRestaurant, setSelectedRestaurant] = React.useState<Restaurant | null>(null);
+
+  // Toast notification state
+  const [toast, setToast] = React.useState<{ message: string; visible: boolean }>({ message: '', visible: false });
+  const toastTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Multi-restaurant warning dialog state
+  const [pendingItem, setPendingItem] = React.useState<{
+    item: MenuItem;
+    quantity: number;
+    variation?: Variation;
+    addOns?: AddOn[];
+  } | null>(null);
+
+  const showToast = React.useCallback((message: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ message, visible: true });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }));
+    }, 2000);
+  }, []);
+
+  // Wrapped addToCart that checks for multi-restaurant
+  const handleAddToCart = React.useCallback((item: MenuItem, quantity: number = 1, variation?: Variation, addOns?: AddOn[]) => {
+    const existingRestaurantIds = new Set(cart.cartItems.map(ci => ci.restaurantId).filter(Boolean));
+    const isNewRestaurant = item.restaurantId && existingRestaurantIds.size > 0 && !existingRestaurantIds.has(item.restaurantId);
+
+    if (isNewRestaurant) {
+      // Show warning dialog
+      setPendingItem({ item, quantity, variation, addOns });
+    } else {
+      // Add directly
+      cart.addToCart(item, quantity, variation, addOns);
+      showToast(`${item.name} added to cart!`);
+    }
+  }, [cart, showToast]);
+
+  const confirmPendingAdd = React.useCallback(() => {
+    if (pendingItem) {
+      cart.addToCart(pendingItem.item, pendingItem.quantity, pendingItem.variation, pendingItem.addOns);
+      showToast(`${pendingItem.item.name} added to cart!`);
+      setPendingItem(null);
+    }
+  }, [pendingItem, cart, showToast]);
+
+  const cancelPendingAdd = React.useCallback(() => {
+    setPendingItem(null);
+  }, []);
 
   const handleViewChange = (view: 'restaurants' | 'restaurant-menu' | 'cart' | 'checkout') => {
     setCurrentView(view);
@@ -107,7 +154,7 @@ function FoodService() {
           restaurant={selectedRestaurant}
           cartItems={cart.cartItems}
           onBack={handleBackToRestaurants}
-          onAddToCart={cart.addToCart}
+          onAddToCart={handleAddToCart}
           updateQuantity={cart.updateQuantity}
         />
       )}
@@ -137,6 +184,54 @@ function FoodService() {
           itemCount={cart.getTotalItems()}
           onCartClick={() => handleViewChange('cart')}
         />
+      )}
+
+      {/* Toast Notification */}
+      <div
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${
+          toast.visible 
+            ? 'opacity-100 translate-y-0' 
+            : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}
+      >
+        <div className="bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 text-sm font-medium">
+          <span className="text-green-400 text-lg">✓</span>
+          {toast.message}
+        </div>
+      </div>
+
+      {/* Multi-Restaurant Warning Dialog */}
+      {pendingItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden animate-scale-in">
+            <div className="p-6 text-center">
+              <div className="text-4xl mb-3">🏪</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                Different Restaurant
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                You're adding an item from a different restaurant. Each restaurant will have a <span className="font-semibold text-gray-900">separate delivery fee</span>.
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                Would you like to continue?
+              </p>
+            </div>
+            <div className="border-t border-gray-100 flex">
+              <button
+                onClick={cancelPendingAdd}
+                className="flex-1 py-3.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors duration-200 border-r border-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmPendingAdd}
+                className="flex-1 py-3.5 text-sm font-semibold text-delivery-primary hover:bg-red-50 transition-colors duration-200"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

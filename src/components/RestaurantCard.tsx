@@ -20,7 +20,10 @@ const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant, onCardClick
           alt={restaurant.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           onError={(e) => {
-            e.currentTarget.src = 'https://via.placeholder.com/400x300?text=' + encodeURIComponent(restaurant.name);
+            const initial = restaurant.name.charAt(0).toUpperCase();
+            e.currentTarget.src = `data:image/svg+xml,${encodeURIComponent(
+              `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="%23e5e7eb"/><text x="200" y="160" font-family="Arial,sans-serif" font-size="64" fill="%239ca3af" text-anchor="middle" dominant-baseline="central">${initial}</text></svg>`
+            )}`;
           }}
         />
       </div>

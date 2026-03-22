@@ -91,8 +91,7 @@ export const useRestaurants = () => {
 
   const updateRestaurant = async (id: string, updates: Partial<Restaurant>) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.type !== undefined) updateData.type = updates.type;
       if (updates.image !== undefined) updateData.image = updates.image;

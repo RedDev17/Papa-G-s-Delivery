@@ -106,6 +106,13 @@ const customerIcon = L.divIcon({
   popupAnchor: [0, -40]
 });
 
+// Stable reference for RoutingMachine line options (prevents re-init on every render)
+const DASHED_LINE_OPTIONS = {
+  styles: [{ color: '#f59e0b', opacity: 0.6, weight: 5, dashArray: '10, 10' }],
+  extendToWaypoints: true,
+  missingRouteTolerance: 0
+};
+
 interface DeliveryMapProps {
   hubLocation?: { lat: number; lng: number };
   restaurantLocation: { lat: number; lng: number } | null;
@@ -142,10 +149,34 @@ const MapBounds: React.FC<{
 };
 
 // Component to handle "Locate Me" functionality
-const LocateControl = () => {
+const LocateControl = ({ onLocationSelect }: { onLocationSelect?: (lat: number, lng: number) => void }) => {
     const map = useMap();
+    const [locating, setLocating] = React.useState(false);
     
+    React.useEffect(() => {
+        const onLocationFound = (e: L.LocationEvent) => {
+            setLocating(false);
+            if (onLocationSelect) {
+                onLocationSelect(e.latlng.lat, e.latlng.lng);
+            }
+        };
+
+        const onLocationError = () => {
+            setLocating(false);
+            alert('Could not get your location. Please allow location access and try again.');
+        };
+
+        map.on('locationfound', onLocationFound);
+        map.on('locationerror', onLocationError);
+
+        return () => {
+            map.off('locationfound', onLocationFound);
+            map.off('locationerror', onLocationError);
+        };
+    }, [map, onLocationSelect]);
+
     const handleLocate = () => {
+        setLocating(true);
         map.locate({ setView: true, maxZoom: 16 });
     };
 
@@ -158,10 +189,11 @@ const LocateControl = () => {
                         e.stopPropagation();
                         handleLocate();
                     }}
+                    disabled={locating}
                     className="bg-white w-[30px] h-[30px] flex items-center justify-center cursor-pointer hover:bg-gray-100 border-none rounded-sm shadow-sm"
                     title="Locate Me"
                 >
-                    <Locate className="h-5 w-5 text-gray-700" />
+                    <Locate className={`h-5 w-5 text-gray-700 ${locating ? 'animate-pulse' : ''}`} />
                 </button>
             </div>
         </div>
@@ -202,7 +234,7 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
         {/* Custom Zoom Control at Bottom Right */}
         <ZoomControl position="bottomright" />
         
-        <LocateControl />
+        <LocateControl onLocationSelect={onLocationSelect} />
 
         <MapBounds 
           hubLocation={hubLocation}
@@ -215,11 +247,7 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
           <RoutingMachine 
             restaurantLocation={hubLocation} 
             customerLocation={restaurantLocation}
-            lineOptions={{
-              styles: [{ color: '#f59e0b', opacity: 0.6, weight: 5, dashArray: '10, 10' }],
-              extendToWaypoints: true,
-              missingRouteTolerance: 0
-            }}
+            lineOptions={DASHED_LINE_OPTIONS}
           />
         )}
 

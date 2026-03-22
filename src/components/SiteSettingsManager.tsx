@@ -72,9 +72,9 @@ const SiteSettingsManager: React.FC = () => {
         currency_code: formData.currency_code,
         site_logo: logoUrl,
         service_food_visible: String(formData.service_food_visible),
+        service_pabili_visible: String(formData.service_pabili_visible),
         service_padala_visible: String(formData.service_padala_visible),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any);
+      } as Record<string, string>);
 
       setIsEditing(false);
       setLogoFile(null);

@@ -45,14 +45,36 @@ const RoutingMachine = ({ restaurantLocation, customerLocation, lineOptions }: R
 
     return () => {
       try {
-        if (map && routingControl) { 
-            // Safe removal
-            map.removeControl(routingControl);
-            
-            // Manually clear layers if they persist (sometimes needed for LRM)
-            // But usually removeControl is enough. The error 'removeLayer' of null suggests 
-            // LRM internal events firing after removal.
-            // We can mute errors or ensure we don't double remove.
+        if (map && routingControl) {
+          // Defuse internal LRM state BEFORE removing the control.
+          // This prevents the race condition where an in-flight OSRM HTTP
+          // response triggers _clearLines after the control is already gone,
+          // which would crash with "Cannot read properties of null (reading 'removeLayer')".
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const rc = routingControl as any;
+
+          // Override internal methods so late-arriving OSRM responses are harmless.
+          // These methods try to manipulate map layers that no longer exist.
+          rc._clearLines = () => {};
+          rc._updateLines = () => {};
+          rc._routeSelected = () => {};
+
+          // Detach all event listeners to prevent any post-disposal callbacks
+          rc.off();
+
+          // Null out internal layer references that _clearLines would access
+          if (rc._line) {
+            try { rc._line.removeFrom(map); } catch { /* already removed */ }
+            rc._line = null;
+          }
+          if (rc._alternatives && Array.isArray(rc._alternatives)) {
+            rc._alternatives.forEach((alt: any) => {
+              try { alt.removeFrom(map); } catch { /* already removed */ }
+            });
+            rc._alternatives = [];
+          }
+
+          map.removeControl(routingControl);
         }
       } catch (e) {
         // Ignore removal errors as they are likely due to map/layer already being destroyed

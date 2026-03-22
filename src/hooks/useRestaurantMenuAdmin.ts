@@ -168,8 +168,7 @@ export const useRestaurantMenuAdmin = (restaurantId: string | null) => {
   const updateMenuItem = async (id: string, updates: Partial<RestaurantMenuItem>) => {
     try {
       // Prepare update data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       
       if (updates.name !== undefined) updateData.name = updates.name.trim();
       if (updates.description !== undefined) updateData.description = updates.description.trim();
@@ -274,6 +273,7 @@ export const useRestaurantMenuAdmin = (restaurantId: string | null) => {
 
   useEffect(() => {
     fetchMenuItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
 
   return {

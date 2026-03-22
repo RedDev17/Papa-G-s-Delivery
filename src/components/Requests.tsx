@@ -23,7 +23,7 @@ const Requests: React.FC<RequestsProps> = ({ onBack }) => {
   });
   const [isSubmittingAngkas, setIsSubmittingAngkas] = useState(false);
   const [distance, setDistance] = useState<number | null>(null);
-  const [deliveryFee, setDeliveryFee] = useState<number>(60);
+  const [deliveryFee, setDeliveryFee] = useState<number>(calculateDeliveryFee(null));
   const [isCalculating, setIsCalculating] = useState(false);
 
   const requestTypes = [
@@ -53,12 +53,12 @@ const Requests: React.FC<RequestsProps> = ({ onBack }) => {
         setDeliveryFee(fee);
       } else {
         setDistance(null);
-        setDeliveryFee(60);
+        setDeliveryFee(calculateDeliveryFee(null));
       }
     } catch (error) {
       console.error('Error calculating Angkas fee:', error);
       setDistance(null);
-      setDeliveryFee(60);
+      setDeliveryFee(calculateDeliveryFee(null));
     } finally {
       setIsCalculating(false);
     }
@@ -133,7 +133,7 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
         dropoff_address: ''
       });
       setDistance(null);
-      setDeliveryFee(60);
+      setDeliveryFee(calculateDeliveryFee(null));
     } catch (error) {
       console.error('Error submitting request:', error);
       alert('Failed to submit request. Please try again.');

@@ -225,6 +225,14 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
 
       if (error) throw error;
 
+      // Create Google Maps pin links from exact map coordinates
+      const pickupMapLink = pickupCoords
+        ? `https://www.google.com/maps?q=${pickupCoords.lat},${pickupCoords.lng}`
+        : '';
+      const deliveryMapLink = deliveryCoords
+        ? `https://www.google.com/maps?q=${deliveryCoords.lat},${deliveryCoords.lng}`
+        : '';
+
       // Create Messenger message
       const headingEmoji = title === 'Pabili' ? '🛒' : '📦';
       const serviceLabel = title === 'Pabili' ? 'Pabili' : 'Padala';
@@ -243,10 +251,10 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
 
 🏪 Store: ${formData.store_name}
 📍 Store Location:
-${formData.pickup_address}
+${formData.pickup_address}${pickupMapLink ? `\n📌 Pin: ${pickupMapLink}` : ''}
 
 📍 Delivery Location:
-${formData.delivery_address}
+${formData.delivery_address}${deliveryMapLink ? `\n📌 Pin: ${deliveryMapLink}` : ''}
 
 📦 ITEMS TO BUY:
 ${pabiliItems.filter(i => i.name).map(i => `• ${i.name} (Qty: ${i.qty})`).join('\n')}
@@ -269,10 +277,10 @@ Please confirm this Pabili request. Thank you! 🛵`;
 📞 Contact: ${formData.receiver_contact || 'N/A'}
 
 📍 PICKUP FROM:
-${formData.pickup_address}
+${formData.pickup_address}${pickupMapLink ? `\n📌 Pin: ${pickupMapLink}` : ''}
 
 📍 DELIVER TO:
-${formData.delivery_address}
+${formData.delivery_address}${deliveryMapLink ? `\n📌 Pin: ${deliveryMapLink}` : ''}
 
 📦 ITEM DETAILS:
 ${formData.item_description}
