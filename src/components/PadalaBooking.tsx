@@ -359,7 +359,7 @@ Please confirm this Padala request. Thank you! 🛵`;
           </h1>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 md:p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 space-y-8">
           {/* Customer Information */}
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -376,7 +376,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                   value={formData.customer_name}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                 />
               </div>
               <div>
@@ -389,7 +389,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                   value={formData.contact_number}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                 />
               </div>
             </div>
@@ -408,7 +408,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                   name="receiver_name"
                   value={formData.receiver_name}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                 />
               </div>
               <div>
@@ -420,7 +420,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                   name="receiver_contact"
                   value={formData.receiver_contact}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                 />
               </div>
             </div>
@@ -460,7 +460,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                       value={formData.store_name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                       placeholder="e.g., 7-Eleven, Jollibee"
                     />
                   </div>
@@ -541,7 +541,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                           value={item.name}
                           onChange={(e) => handlePabiliItemChange(index, 'name', e.target.value)}
                           placeholder="Item name"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                         />
                       </div>
                       <div className="col-span-3">
@@ -550,7 +550,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                           value={item.qty}
                           onChange={(e) => handlePabiliItemChange(index, 'qty', e.target.value)}
                           placeholder="Qty"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                         />
                       </div>
                       <div className="col-span-1 flex justify-center">
@@ -586,7 +586,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                       onChange={handleInputChange}
                       required
                       rows={3}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                       placeholder="Describe what you are sending"
                     />
                   </div>
@@ -599,7 +599,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                           name="item_weight"
                           value={formData.item_weight}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                           placeholder="e.g., 1kg, 2kg, light"
                         />
                       </div>
@@ -612,7 +612,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                           onChange={handleInputChange}
                           min="0"
                           step="0.01"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                           placeholder="₱0.00"
                         />
                       </div>
@@ -639,7 +639,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                     value={formData.preferred_date}
                     onChange={handleInputChange}
                     min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                   />
                 </div>
                 <div>
@@ -648,7 +648,7 @@ Please confirm this Padala request. Thank you! 🛵`;
                     name="preferred_time"
                     value={formData.preferred_time}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                   >
                     <option value="Morning">Morning</option>
                     <option value="Afternoon">Afternoon</option>
@@ -668,7 +668,7 @@ Please confirm this Padala request. Thank you! 🛵`;
               value={formData.special_instructions}
               onChange={handleInputChange}
               rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-primary focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-green-primary/20 focus:border-green-primary transition-all duration-200"
               placeholder="Any special instructions for delivery"
             />
           </div>
@@ -728,7 +728,7 @@ Please confirm this Padala request. Thank you! 🛵`;
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-4 rounded-xl font-medium text-lg transition-all duration-200 transform bg-delivery-primary text-white hover:bg-delivery-dark hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform bg-delivery-primary text-white hover:bg-delivery-dark hover:-translate-y-1 shadow-md hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {isSubmitting
               ? 'Submitting...'

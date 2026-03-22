@@ -9,31 +9,27 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ searchQuery, onSearchChange, restaurantCount = 8 }) => {
   return (
-    <section className="relative bg-gradient-to-br from-red-500 via-orange-500 to-yellow-500 py-8 px-4 md:py-12 lg:py-16">
+    <section className="relative bg-gradient-to-br from-red-500 via-orange-500 to-yellow-500 py-6 px-4 md:py-8 lg:py-10">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col items-center text-center">
-          {/* Top Row - Branding */}
-          <div className="flex items-center justify-center w-full mb-6">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white animate-fade-in drop-shadow-lg">
-              Papa <span className="italic">G's Delivery</span>
-            </h1>
-          </div>
+          {/* Branding */}
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white animate-fade-in drop-shadow-lg mb-3">
+            Papa <span className="italic">G's Delivery</span>
+          </h1>
 
-          {/* Greeting Section */}
-          <div className="mb-8">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <h2 className="text-4xl md:text-5xl font-bold text-white">
-                Hello!
-              </h2>
-              <span className="text-4xl md:text-5xl">👋</span>
+          {/* Greeting */}
+          <div className="mb-5">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <h2 className="text-3xl md:text-4xl font-bold text-white">Hello!</h2>
+              <span className="text-3xl md:text-4xl">👋</span>
             </div>
-            <p className="text-white/90 text-xl md:text-2xl text-center">
+            <p className="text-white/90 text-lg md:text-xl">
               {restaurantCount} Restaurant{restaurantCount !== 1 ? 's' : ''} Available
             </p>
           </div>
 
-          {/* Search Bar - Centered */}
-          <div className="w-full max-w-4xl">
+          {/* Search Bar */}
+          <div className="w-full max-w-2xl">
             <SearchBar
               searchQuery={searchQuery}
               onSearchChange={onSearchChange}

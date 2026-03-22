@@ -6,9 +6,10 @@ interface HeaderProps {
   cartItemsCount: number;
   onCartClick: () => void;
   onMenuClick: () => void;
+  hideCart?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartClick, onMenuClick }) => {
+const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartClick, onMenuClick, hideCart = false }) => {
   const { siteSettings, loading } = useSiteSettings();
 
   return (
@@ -40,19 +41,21 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartClick, onMenuClic
             </h1>
           </button>
 
-          <div className="hidden sm:flex items-center space-x-2">
-            <button 
-              onClick={onCartClick}
-              className="relative p-2 text-gray-700 hover:text-delivery-primary hover:bg-red-50 rounded-full transition-all duration-200"
-            >
-              <ShoppingCart className="h-6 w-6" />
-              {cartItemsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-delivery-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-bounce-gentle font-medium">
-                  {cartItemsCount}
-                </span>
-              )}
-            </button>
-          </div>
+          {!hideCart && (
+            <div className="hidden sm:flex items-center space-x-2">
+              <button 
+                onClick={onCartClick}
+                className="relative p-2 text-gray-700 hover:text-delivery-primary hover:bg-red-50 rounded-full transition-all duration-200"
+              >
+                <ShoppingCart className="h-6 w-6" />
+                {cartItemsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-delivery-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-bounce-gentle font-medium">
+                    {cartItemsCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

@@ -31,7 +31,7 @@ const ServiceSelection: React.FC<ServiceSelectionProps> = ({ onServiceSelect }) 
       id: 'padala' as const,
       name: 'Padala',
       icon: '📦',
-      description: 'Padala',
+      description: 'Send packages',
       color: 'bg-purple-50 hover:bg-purple-100 border-purple-200',
       iconColor: 'text-purple-600',
       settingKey: 'service_padala_visible' as const,
@@ -60,12 +60,15 @@ const ServiceSelection: React.FC<ServiceSelectionProps> = ({ onServiceSelect }) 
 
   return (
     <div className="min-h-screen bg-white py-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header with gray background */}
-        <div className="bg-[rgb(117,117,117)] text-white py-6 px-6 rounded-t-xl mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-center">
-            Select service
+      <div className="max-w-4xl mx-auto">
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight mb-4">
+            Hello there! <span className="text-4xl">👋</span>
           </h1>
+          <p className="text-lg text-gray-500 max-w-lg mx-auto">
+            What can we do for you today? Choose a service below to get started.
+          </p>
         </div>
 
         {services.length === 0 ? (
@@ -74,25 +77,30 @@ const ServiceSelection: React.FC<ServiceSelectionProps> = ({ onServiceSelect }) 
             <p className="text-sm text-gray-400 mt-2">Please check back later.</p>
           </div>
         ) : (
-          /* Services Grid - 2 columns with last item centered */
-          <div className="grid grid-cols-2 gap-4 md:gap-6 max-w-md mx-auto">
-            {services.map((service, index) => (
-              <div
+          /* Services Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {services.map((service) => (
+              <button
                 key={service.id}
-                className={index === services.length - 1 && services.length % 2 !== 0 ? "col-span-2 flex justify-center" : ""}
+                onClick={() => handleServiceClick(service.id)}
+                className={`group relative overflow-hidden bg-white border border-gray-100 rounded-2xl p-8 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-delivery-primary/20 w-full text-left`}
               >
-                <button
-                  onClick={() => handleServiceClick(service.id)}
-                  className="bg-white border-2 border-[rgb(117,117,117)] rounded-xl p-6 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:border-delivery-primary focus:outline-none focus:ring-2 focus:ring-delivery-primary focus:ring-offset-2 w-full max-w-[200px]"
-                >
-                  <div className="text-center">
-                    <div className="text-6xl md:text-7xl mb-3">{service.icon}</div>
-                    <h2 className="text-lg md:text-xl font-semibold text-[rgb(117,117,117)]">
-                      {service.name}
-                    </h2>
+                {/* Background accent block inside button */}
+                <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full transition-transform duration-500 group-hover:scale-150 opacity-20 ${service.color.split(' ')[0]}`} />
+                
+                <div className="relative z-10">
+                  <div className={`inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-6 shadow-sm transition-transform duration-300 group-hover:scale-110 ${service.color.split(' ')[0]}`}>
+                    <span className="text-5xl">{service.icon}</span>
                   </div>
-                </button>
-              </div>
+                  
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    {service.name}
+                  </h2>
+                  <p className="text-gray-500 font-medium leading-relaxed">
+                    {service.description}
+                  </p>
+                </div>
+              </button>
             ))}
           </div>
         )}

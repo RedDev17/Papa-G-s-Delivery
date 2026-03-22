@@ -307,23 +307,26 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
 
   if (step === 'details') {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 sm:mb-8">
-          <button
-            onClick={onBack}
-            className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors duration-200"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="hidden sm:inline">Back to Cart</span>
-            <span className="sm:hidden">Back</span>
-          </button>
-          <h1 className="text-2xl sm:text-3xl font-noto font-semibold text-black sm:ml-4">Delivery Details</h1>
-        </div>
+      <div className="min-h-screen bg-gray-50 pb-12">
+        <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 sm:mb-8">
+            <button
+              onClick={onBack}
+              className="flex items-center space-x-2 text-gray-500 hover:text-gray-900 transition-colors duration-200 bg-white px-4 py-2 rounded-full shadow-sm hover:shadow"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="hidden sm:inline font-medium">Back to Cart</span>
+              <span className="sm:hidden font-medium">Back</span>
+            </button>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight sm:ml-4">Checkout</h1>
+          </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Order Summary */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-2xl font-noto font-medium text-black mb-6">Order Summary</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span className="text-2xl">📋</span> Order Summary
+            </h2>
             
             <div className="space-y-6 mb-6">
               {Object.entries(itemsByRestaurant).map(([restId, items]) => {
@@ -391,16 +394,18 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                 </span>
                 <span className="text-gray-900 font-semibold">₱{totalDeliveryFee.toFixed(2)}</span>
               </div>
-              <div className="flex items-center justify-between text-2xl font-noto font-semibold text-black pt-2 border-t border-gray-200">
+              <div className="flex items-center justify-between text-2xl font-bold text-gray-900 pt-3 border-t border-gray-200">
                 <span>Total:</span>
-                <span>₱{finalTotalPrice.toFixed(2)}</span>
+                <span className="text-delivery-primary">₱{finalTotalPrice.toFixed(2)}</span>
               </div>
             </div>
           </div>
 
           {/* Customer Details Form */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-2xl font-noto font-medium text-black mb-6">Delivery Information</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span className="text-2xl">📍</span> Delivery Details
+            </h2>
             
             <form className="space-y-6">
               {/* Customer Information */}
@@ -410,7 +415,7 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                   type="text"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                   placeholder="Enter your full name"
                   required
                 />
@@ -422,7 +427,7 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                   type="tel"
                   value={contactNumber}
                   onChange={(e) => setContactNumber(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                   placeholder="09XX XXX XXXX"
                   required
                 />
@@ -492,7 +497,7 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                   type="text"
                   value={landmark}
                   onChange={(e) => setLandmark(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                   placeholder="e.g., Near McDonald's, Beside 7-Eleven, In front of school"
                 />
               </div>
@@ -503,7 +508,7 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                   placeholder="Any special requests or notes..."
                   rows={3}
                 />
@@ -514,8 +519,8 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                 disabled={!isDetailsValid}
                 className={`w-full py-4 rounded-xl font-medium text-lg transition-all duration-200 transform ${
                   isDetailsValid
-                    ? 'bg-delivery-primary text-white hover:bg-delivery-dark hover:scale-[1.02] shadow-lg'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    ? 'bg-delivery-primary text-white hover:bg-delivery-dark hover:-translate-y-1 shadow-md hover:shadow-xl'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}
               >
                 Proceed to Payment
@@ -524,28 +529,32 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
           </div>
         </div>
       </div>
+      </div>
     );
   }
 
   // Payment Step
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 sm:mb-8">
-        <button
-          onClick={() => setStep('details')}
-          className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors duration-200"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="hidden sm:inline">Back to Details</span>
-          <span className="sm:hidden">Back</span>
-        </button>
-        <h1 className="text-2xl sm:text-3xl font-noto font-semibold text-black sm:ml-4">Payment</h1>
-      </div>
+    <div className="min-h-screen bg-gray-50 pb-12">
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 sm:mb-8">
+          <button
+            onClick={() => setStep('details')}
+            className="flex items-center space-x-2 text-gray-500 hover:text-gray-900 transition-colors duration-200 bg-white px-4 py-2 rounded-full shadow-sm hover:shadow"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="hidden sm:inline font-medium">Back to Details</span>
+            <span className="sm:hidden font-medium">Back</span>
+          </button>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight sm:ml-4">Payment</h1>
+        </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Payment Method Selection */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-2xl font-noto font-medium text-black mb-6">Choose Payment Method</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <span className="text-2xl">💳</span> Choose Payment
+          </h2>
           
           <div className="grid grid-cols-1 gap-4 mb-6">
             {paymentMethods.map((method) => (
@@ -601,8 +610,10 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
         </div>
 
         {/* Order Summary */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-2xl font-noto font-medium text-black mb-6">Final Order Summary</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <span className="text-2xl">📝</span> Final Order Summary
+          </h2>
           
           <div className="space-y-4 mb-6">
             <div className="bg-red-50 rounded-lg p-4 border border-red-100">
@@ -677,15 +688,15 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
               </span>
               <span className="text-gray-900 font-semibold">₱{totalDeliveryFee.toFixed(2)}</span>
             </div>
-            <div className="flex items-center justify-between text-2xl font-noto font-semibold text-black pt-2 border-t border-gray-200">
+            <div className="flex items-center justify-between text-2xl font-bold text-gray-900 pt-3 border-t border-gray-200">
               <span>Total:</span>
-              <span>₱{finalTotalPrice.toFixed(2)}</span>
+              <span className="text-delivery-primary">₱{finalTotalPrice.toFixed(2)}</span>
             </div>
           </div>
 
           <button
             onClick={handlePlaceOrder}
-            className="w-full py-4 rounded-xl font-medium text-lg transition-all duration-200 transform bg-delivery-primary text-white hover:bg-delivery-dark hover:scale-[1.02] shadow-lg"
+            className="w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform bg-delivery-primary text-white hover:bg-delivery-dark hover:-translate-y-1 shadow-md hover:shadow-xl"
           >
             Place Order via Messenger
           </button>
@@ -693,6 +704,7 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
           <p className="text-xs text-gray-500 text-center mt-3">
             You'll be redirected to Facebook Messenger to confirm your order. Don't forget to attach your payment screenshot!
           </p>
+        </div>
         </div>
       </div>
     </div>

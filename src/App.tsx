@@ -118,6 +118,7 @@ function FoodService() {
         cartItemsCount={cart.getTotalItems()}
         onCartClick={() => handleViewChange('cart')}
         onMenuClick={handleBackToServices}
+        hideCart={currentView === 'cart' || currentView === 'checkout'}
       />
 
       {/* Back to Services pill - only visible on food homepage (restaurants view) */}
@@ -179,12 +180,12 @@ function FoodService() {
         />
       )}
       
-      {(currentView === 'restaurants' || currentView === 'restaurant-menu') && (
+      {currentView === 'restaurants' || currentView === 'restaurant-menu' ? (
         <FloatingCartButton 
           itemCount={cart.getTotalItems()}
           onCartClick={() => handleViewChange('cart')}
         />
-      )}
+      ) : null}
 
       {/* Toast Notification */}
       <div

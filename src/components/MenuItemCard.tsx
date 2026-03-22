@@ -125,12 +125,12 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2">
             {item.isOnDiscount && item.discountPrice && (
-              <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
+              <div className="bg-delivery-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md animate-pulse">
                 SALE
               </div>
             )}
             {item.popular && (
-              <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+              <div className="bg-delivery-primary text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md">
                 ⭐ POPULAR
               </div>
             )}
@@ -342,7 +342,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => updateAddOnQuantity(addOn, 1)}
-                                  className="flex items-center space-x-1 px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-xl hover:from-red-600 hover:to-orange-600 transition-all duration-200 text-sm font-medium shadow-lg"
+                                  className="flex items-center space-x-1 px-4 py-2 bg-delivery-primary text-white rounded-xl hover:bg-delivery-dark transition-all duration-200 text-sm font-medium shadow-sm"
                                 >
                                   <Plus className="h-3 w-3" />
                                   <span>Add</span>
@@ -373,7 +373,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
 
               <button
                 onClick={handleCustomizedAddToCart}
-                className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white py-4 rounded-xl hover:from-red-600 hover:to-orange-600 transition-all duration-200 font-semibold flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="w-full bg-delivery-primary text-white py-4 rounded-xl hover:bg-delivery-dark transition-all duration-200 font-semibold flex items-center justify-center space-x-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
               >
                 <ShoppingCart className="h-5 w-5" />
                 <span>Add to Cart</span>

@@ -169,7 +169,7 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
           </h1>
         </div>
 
-        <form onSubmit={handleAngkasSubmit} className="bg-white rounded-xl shadow-sm p-6 md:p-8 space-y-6">
+        <form onSubmit={handleAngkasSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 space-y-6">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -181,7 +181,7 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
                   value={angkasData.customer_name}
                   onChange={handleAngkasInputChange}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                 />
               </div>
               <div>
@@ -192,7 +192,7 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
                   value={angkasData.contact_number}
                   onChange={handleAngkasInputChange}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-delivery-primary focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                 />
               </div>
             </div>
@@ -204,7 +204,7 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
               name="request_type"
               value={angkasData.request_type}
               onChange={handleAngkasInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-primary focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
             >
               {requestTypes.map(type => (
                 <option key={type.value} value={type.value}>
@@ -222,7 +222,7 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
               value={angkasData.subject}
               onChange={handleAngkasInputChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-primary focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
               placeholder="Brief summary of your request (e.g., Need Angkas ride)"
             />
           </div>
@@ -235,7 +235,7 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
               onChange={handleAngkasInputChange}
               required
               rows={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-primary focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
               placeholder="Please provide detailed information about your Angkas request (pickup location, destination, time needed, etc.)"
             />
           </div>
@@ -248,7 +248,7 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
               onChange={handleAngkasInputChange}
               required
               rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-primary focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
               placeholder="Where to pick up (complete address)"
             />
           </div>
@@ -262,7 +262,7 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
               onBlur={calculateFee}
               required
               rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-primary focus:border-transparent"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
               placeholder="Where to drop off (complete address)"
             />
             {isCalculating && (
@@ -278,7 +278,7 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
           <button
             type="submit"
             disabled={isSubmittingAngkas}
-            className="w-full py-4 rounded-xl font-medium text-lg transition-all duration-200 transform bg-delivery-primary text-white hover:bg-delivery-dark hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform bg-delivery-primary text-white hover:bg-delivery-dark hover:-translate-y-1 shadow-md hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
           >
             <Send className="h-5 w-5" />
             {isSubmittingAngkas ? 'Submitting...' : 'Submit Angkas Request'}

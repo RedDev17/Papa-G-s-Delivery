@@ -41,10 +41,15 @@ const RestaurantList: React.FC<RestaurantListProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
-          {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} available
-        </h2>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+            Popular Restaurants
+          </h2>
+          <p className="text-gray-500 mt-1 font-medium">
+            {filteredRestaurants.length} location{filteredRestaurants.length !== 1 ? 's' : ''} {searchQuery ? 'found' : 'available'}
+          </p>
+        </div>
       </div>
 
       {filteredRestaurants.length > 0 ? (
@@ -58,11 +63,11 @@ const RestaurantList: React.FC<RestaurantListProps> = ({
           ))}
         </div>
       ) : (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">No restaurants found</h3>
-          <p className="text-gray-600">
-            We couldn't find any restaurants matching "{searchQuery}"
+        <div className="text-center py-20 bg-gray-50 rounded-3xl border border-gray-100">
+          <div className="text-6xl mb-4 opacity-50">🍽️</div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">No restaurants found</h3>
+          <p className="text-gray-500 max-w-md mx-auto">
+            We couldn't find any locations matching "<span className="font-medium text-gray-900">{searchQuery}</span>". Try adjusting your search.
           </p>
         </div>
       )}
