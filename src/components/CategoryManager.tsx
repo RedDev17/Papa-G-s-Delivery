@@ -231,10 +231,10 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({ onBack }) => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={onBack}
-                className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200"
+                className="flex items-center space-x-2 bg-gray-800 text-white px-4 py-2 rounded-full hover:bg-gray-700 shadow-sm transition-colors duration-200"
               >
-                <ArrowLeft className="h-5 w-5" />
-                <span>Dashboard</span>
+                <ArrowLeft className="h-4 w-4" />
+                <span className="font-medium">Dashboard</span>
               </button>
               <h1 className="text-2xl font-playfair font-semibold text-black">Manage Categories</h1>
             </div>

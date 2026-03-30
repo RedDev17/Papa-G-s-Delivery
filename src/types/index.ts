@@ -32,6 +32,7 @@ export interface MenuItem {
   effectivePrice?: number;
   isOnDiscount?: boolean;
   restaurantId?: string;
+  variationGroupName?: string;
 }
 
 export interface CartItem extends MenuItem {
@@ -116,6 +117,7 @@ export interface RestaurantMenuItem {
   discountActive?: boolean;
   effectivePrice?: number;
   isOnDiscount?: boolean;
+  variationGroupName?: string;
 }
 
 // Grocery Item (for Pabili service)

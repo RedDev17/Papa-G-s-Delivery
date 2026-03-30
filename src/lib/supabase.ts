@@ -56,6 +56,7 @@ export type Database = {
           discount_end_date: string | null;
           discount_active: boolean;
           restaurant_id: string | null;
+          variation_group_name: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -73,6 +74,7 @@ export type Database = {
           discount_end_date?: string | null;
           discount_active?: boolean;
           restaurant_id?: string | null;
+          variation_group_name?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -90,6 +92,7 @@ export type Database = {
           discount_end_date?: string | null;
           discount_active?: boolean;
           restaurant_id?: string | null;
+          variation_group_name?: string | null;
           created_at?: string;
           updated_at?: string;
         };

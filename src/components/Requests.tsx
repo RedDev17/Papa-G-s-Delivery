@@ -33,7 +33,12 @@ const Requests: React.FC<RequestsProps> = ({ onBack }) => {
   // Angkas/Padala handlers
   const handleAngkasInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setAngkasData(prev => ({ ...prev, [name]: value }));
+    if (name === 'contact_number') {
+      const digits = value.replace(/\D/g, '').slice(0, 11);
+      setAngkasData(prev => ({ ...prev, [name]: digits }));
+    } else {
+      setAngkasData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const calculateFee = async () => {
@@ -186,14 +191,27 @@ Thank you for your Angkas/Padala request. We will get back to you soon! 🛵`;
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
-                <input
-                  type="tel"
-                  name="contact_number"
-                  value={angkasData.contact_number}
-                  onChange={handleAngkasInputChange}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
-                />
+                <div className="relative flex">
+                  <span className="inline-flex items-center px-3.5 bg-gray-100 border border-r-0 border-gray-200 rounded-l-xl text-sm font-medium text-gray-600 select-none">+63</span>
+                  <input
+                    type="tel"
+                    name="contact_number"
+                    value={angkasData.contact_number}
+                    onChange={handleAngkasInputChange}
+                    required
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-r-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                    placeholder="09XX XXX XXXX"
+                    maxLength={11}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                  />
+                </div>
+                {angkasData.contact_number && angkasData.contact_number.length < 11 && (
+                  <p className="text-xs text-amber-600 mt-1">{11 - angkasData.contact_number.length} more digit{11 - angkasData.contact_number.length !== 1 ? 's' : ''} needed</p>
+                )}
+                {angkasData.contact_number && angkasData.contact_number.length === 11 && !angkasData.contact_number.startsWith('09') && (
+                  <p className="text-xs text-red-500 mt-1">Must start with 09</p>
+                )}
               </div>
             </div>
           </div>

@@ -156,7 +156,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
             <h4 className="text-base font-bold text-gray-900 leading-tight flex-1 pr-2">{item.name}</h4>
             {item.variations && item.variations.length > 0 && (
               <div className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full whitespace-nowrap">
-                {item.variations.length} sizes
+                {item.variations.length} {(item.variationGroupName || 'size').toLowerCase()}{item.variations.length > 1 ? 's' : ''}
               </div>
             )}
           </div>
@@ -259,7 +259,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
               {/* Size Variations */}
               {item.variations && item.variations.length > 0 && (
                 <div className="mb-6">
-                  <h4 className="font-semibold text-gray-900 mb-4">Choose Size</h4>
+                  <h4 className="font-semibold text-gray-900 mb-4">Choose {item.variationGroupName || 'Size'}</h4>
                   <div className="space-y-3">
                     {item.variations.map((variation) => (
                       <label

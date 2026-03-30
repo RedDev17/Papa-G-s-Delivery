@@ -177,6 +177,8 @@ function FoodService() {
           cartItems={cart.cartItems}
           totalPrice={cart.getTotalPrice()}
           onBack={() => handleViewChange('cart')}
+          clearCart={cart.clearCart}
+          onOrderPlaced={() => handleViewChange('restaurants')}
         />
       )}
       

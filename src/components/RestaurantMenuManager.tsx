@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Edit, Trash2, Save, X, Package } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Save, X, Package, Search, Filter } from 'lucide-react';
 import { RestaurantMenuItem, Variation, AddOn } from '../types';
 import { useRestaurantMenuAdmin } from '../hooks/useRestaurantMenuAdmin';
 import { useCategories } from '../hooks/useCategories';
@@ -22,6 +22,8 @@ const RestaurantMenuManager: React.FC<RestaurantMenuManagerProps> = ({
   const [currentView, setCurrentView] = useState<'list' | 'add' | 'edit'>('list');
   const [editingItem, setEditingItem] = useState<RestaurantMenuItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
   const [formData, setFormData] = useState<Partial<RestaurantMenuItem>>({
     name: '',
     description: '',
@@ -194,34 +196,37 @@ const RestaurantMenuManager: React.FC<RestaurantMenuManagerProps> = ({
   if (currentView === 'add' || currentView === 'edit') {
     return (
       <div className="min-h-screen bg-gray-50">
+        {/* Top Bar */}
         <div className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center space-x-4">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16 gap-4">
+              <div className="flex items-center space-x-4 min-w-0">
                 <button
                   onClick={handleCancel}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors duration-200"
+                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-gray-800 text-white text-sm font-medium shadow hover:bg-gray-700 transition-colors duration-200 flex-shrink-0"
                 >
-                  <ArrowLeft className="h-5 w-5" />
-                  <span>Back</span>
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Menu</span>
                 </button>
-                <h1 className="text-2xl font-playfair font-semibold text-black">
-                  {currentView === 'add' ? 'Add Menu Item' : 'Edit Menu Item'}
-                </h1>
-                <span className="text-sm text-gray-500">for {restaurantName}</span>
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+                    {currentView === 'add' ? '➕ Add Item' : '✏️ Edit Item'}
+                  </h1>
+                  <p className="text-xs text-gray-500 truncate">for {restaurantName}</p>
+                </div>
               </div>
-              <div className="flex space-x-3">
+              <div className="flex space-x-3 flex-shrink-0">
                 <button
                   onClick={handleCancel}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2"
+                  className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors duration-200 flex items-center space-x-2 text-sm text-gray-600"
                 >
                   <X className="h-4 w-4" />
-                  <span>Cancel</span>
+                  <span className="hidden sm:inline">Cancel</span>
                 </button>
                 <button
                   onClick={handleSaveItem}
                   disabled={isSaving}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors duration-200 flex items-center space-x-2 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSaving ? (
                     <>
@@ -240,431 +245,640 @@ const RestaurantMenuManager: React.FC<RestaurantMenuManagerProps> = ({
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-6">
+
+          {/* Section 1: Basic Info */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+              <span className="text-xl">📝</span> Basic Information
+            </h2>
+            <p className="text-sm text-gray-500 mb-6">Set the item's name, price, and category.</p>
+            
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Item Name *</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Item Name <span className="text-red-400">*</span></label>
                 <input
                   type="text"
                   value={formData.name || ''}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                  placeholder="Enter item name"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                  placeholder="e.g., 1pc Chickenjoy"
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Base Price <span className="text-red-400">*</span></label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-base pointer-events-none">₱</span>
+                    <input
+                      type="number"
+                      value={formData.basePrice ?? 0}
+                      onFocus={(e) => { if (Number(e.target.value) === 0) e.target.value = ''; }}
+                      onBlur={(e) => { if (e.target.value === '') setFormData({ ...formData, basePrice: 0 }); }}
+                      onChange={(e) => setFormData({ ...formData, basePrice: e.target.value === '' ? 0 : Number(e.target.value) })}
+                      className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Category <span className="text-red-400">*</span></label>
+                  <select
+                    value={formData.category || ''}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200 appearance-none"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Base Price *</label>
-                <input
-                  type="number"
-                  value={formData.basePrice || ''}
-                  onChange={(e) => setFormData({ ...formData, basePrice: Number(e.target.value) })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                  placeholder="0"
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description <span className="text-red-400">*</span></label>
+                <textarea
+                  value={formData.description || ''}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                  placeholder="Describe the item for customers..."
+                  rows={3}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-black mb-2">Category *</label>
-                <select
-                  value={formData.category || ''}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                >
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.popular || false}
-                    onChange={(e) => setFormData({ ...formData, popular: e.target.checked })}
-                    className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                  />
-                  <span className="text-sm font-medium text-black">Mark as Popular</span>
+              {/* Toggles */}
+              <div className="flex flex-wrap gap-4 pt-2">
+                <label className="inline-flex items-center gap-3 cursor-pointer select-none bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 hover:border-gray-300 transition-colors duration-200">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={formData.popular || false}
+                      onChange={(e) => setFormData({ ...formData, popular: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-10 h-6 bg-gray-300 rounded-full peer-checked:bg-delivery-primary transition-colors duration-200"></div>
+                    <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform duration-200"></div>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-800">⭐ Popular</span>
+                    <p className="text-xs text-gray-400">Highlighted for customers</p>
+                  </div>
                 </label>
-              </div>
 
-              <div className="flex items-center">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.available ?? true}
-                    onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
-                    className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                  />
-                  <span className="text-sm font-medium text-black">Available for Order</span>
+                <label className="inline-flex items-center gap-3 cursor-pointer select-none bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 hover:border-gray-300 transition-colors duration-200">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={formData.available ?? true}
+                      onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-10 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 transition-colors duration-200"></div>
+                    <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform duration-200"></div>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-800">✅ Available</span>
+                    <p className="text-xs text-gray-400">Shown on the menu</p>
+                  </div>
                 </label>
               </div>
             </div>
+          </div>
 
-            {/* Discount Pricing Section */}
-            <div className="mb-8">
-              <h3 className="text-lg font-playfair font-medium text-black mb-4">Discount Pricing</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Section 2: Image */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+              <span className="text-xl">🖼️</span> Item Image
+            </h2>
+            <p className="text-sm text-gray-500 mb-6">Upload a photo of this item.</p>
+            <ImageUpload
+              currentImage={formData.image}
+              onImageChange={(imageUrl) => {
+                setFormData({ 
+                  ...formData, 
+                  image: imageUrl && imageUrl.trim() !== '' ? imageUrl : undefined 
+                });
+              }}
+            />
+          </div>
+
+          {/* Section 3: Discount Pricing */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+              <span className="text-xl">🏷️</span> Discount Pricing
+            </h2>
+            <p className="text-sm text-gray-500 mb-6">Set a sale price and schedule when it's active.</p>
+            
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-black mb-2">Discount Price</label>
-                  <input
-                    type="number"
-                    value={formData.discountPrice || ''}
-                    onChange={(e) => setFormData({ ...formData, discountPrice: Number(e.target.value) || undefined })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="Enter discount price"
-                  />
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Discount Price</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-base pointer-events-none">₱</span>
+                    <input
+                      type="number"
+                      value={formData.discountPrice ?? 0}
+                      onFocus={(e) => { if (Number(e.target.value) === 0) e.target.value = ''; }}
+                      onBlur={(e) => { if (e.target.value === '') setFormData({ ...formData, discountPrice: undefined }); }}
+                      onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Must be lower than the base price</p>
                 </div>
 
-                <div className="flex items-center">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.discountActive || false}
-                      onChange={(e) => setFormData({ ...formData, discountActive: e.target.checked })}
-                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                    />
-                    <span className="text-sm font-medium text-black">Enable Discount</span>
+                <div className="flex items-start pt-7">
+                  <label className="inline-flex items-center gap-3 cursor-pointer select-none bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 hover:border-gray-300 transition-colors duration-200 w-full">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={formData.discountActive || false}
+                        onChange={(e) => setFormData({ ...formData, discountActive: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-10 h-6 bg-gray-300 rounded-full peer-checked:bg-orange-500 transition-colors duration-200"></div>
+                      <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-sm peer-checked:translate-x-4 transition-transform duration-200"></div>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-800">Enable Discount</span>
+                      <p className="text-xs text-gray-400">Show sale price to customers</p>
+                    </div>
                   </label>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-black mb-2">Discount Start Date</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Start Date</label>
                   <input
                     type="datetime-local"
                     value={formData.discountStartDate || ''}
                     onChange={(e) => setFormData({ ...formData, discountStartDate: e.target.value || undefined })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-2">Discount End Date</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">End Date</label>
                   <input
                     type="datetime-local"
                     value={formData.discountEndDate || ''}
                     onChange={(e) => setFormData({ ...formData, discountEndDate: e.target.value || undefined })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="mb-8">
-              <label className="block text-sm font-medium text-black mb-2">Description *</label>
-              <textarea
-                value={formData.description || ''}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Enter item description"
-                rows={3}
-              />
-            </div>
-
-            <div className="mb-8">
-              <ImageUpload
-                currentImage={formData.image}
-                onImageChange={(imageUrl) => {
-                  setFormData({ 
-                    ...formData, 
-                    image: imageUrl && imageUrl.trim() !== '' ? imageUrl : undefined 
-                  });
-                }}
-              />
-            </div>
-
-            {/* Variations Section */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-playfair font-medium text-black">Size Variations</h3>
-                <button
-                  onClick={addVariation}
-                  className="flex items-center space-x-2 px-3 py-2 bg-cream-100 text-black rounded-lg hover:bg-cream-200 transition-colors duration-200"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Variation</span>
-                </button>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <p className="text-xs text-amber-700">
+                  💡 <strong>Tip:</strong> Leave dates empty for an indefinite discount. The discount only shows if "Enable Discount" is turned on and the current time is within the date range.
+                </p>
               </div>
-
-              {formData.variations?.map((variation, index) => (
-                <div key={variation.id} className="flex items-center space-x-3 mb-3 p-4 bg-gray-50 rounded-lg">
-                  <input
-                    type="text"
-                    value={variation.name}
-                    onChange={(e) => updateVariation(index, 'name', e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Variation name (e.g., Small, Medium, Large)"
-                  />
-                  <input
-                    type="number"
-                    value={variation.price}
-                    onChange={(e) => updateVariation(index, 'price', Number(e.target.value))}
-                    className="w-24 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Price"
-                  />
-                  <button
-                    onClick={() => removeVariation(index)}
-                    className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Add-ons Section */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-playfair font-medium text-black">Add-ons</h3>
-                <button
-                  onClick={addAddOn}
-                  className="flex items-center space-x-2 px-3 py-2 bg-cream-100 text-black rounded-lg hover:bg-cream-200 transition-colors duration-200"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Add-on</span>
-                </button>
-              </div>
-
-              {formData.addOns?.map((addOn, index) => (
-                <div key={addOn.id} className="flex items-center space-x-3 mb-3 p-4 bg-gray-50 rounded-lg">
-                  <input
-                    type="text"
-                    value={addOn.name}
-                    onChange={(e) => updateAddOn(index, 'name', e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Add-on name"
-                  />
-                  <select
-                    value={addOn.category}
-                    onChange={(e) => updateAddOn(index, 'category', e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  >
-                    {addOnCategories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    value={addOn.price}
-                    onChange={(e) => updateAddOn(index, 'price', Number(e.target.value))}
-                    className="w-24 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Price"
-                  />
-                  <button
-                    onClick={() => removeAddOn(index)}
-                    className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
             </div>
           </div>
+
+          {/* Section 4: Variations */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <span className="text-xl">📐</span> {formData.variationGroupName || 'Size'} Variations
+              </h2>
+              <button
+                onClick={addVariation}
+                className="inline-flex items-center space-x-1.5 px-3 py-2 bg-delivery-primary/10 text-delivery-primary rounded-lg hover:bg-delivery-primary/20 transition-colors duration-200 text-sm font-medium"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add</span>
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">Add sizes or options customers can choose from (e.g., Small, Medium, Large).</p>
+
+            <div className="mb-5">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Group Label</label>
+              <input
+                type="text"
+                value={formData.variationGroupName || ''}
+                onChange={(e) => setFormData({ ...formData, variationGroupName: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                placeholder="e.g., Size, Flavor, Temperature (default: Size)"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Customers will see: "Choose {formData.variationGroupName || 'Size'}"
+              </p>
+            </div>
+
+            {formData.variations && formData.variations.length > 0 ? (
+              <div className="space-y-3">
+                {formData.variations.map((variation, index) => (
+                  <div key={variation.id} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <input
+                      type="text"
+                      value={variation.name}
+                      onChange={(e) => updateVariation(index, 'name', e.target.value)}
+                      className="flex-1 px-3 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200 text-sm"
+                      placeholder="e.g., Small, Medium, Large"
+                    />
+                    <div className="relative flex-shrink-0">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm pointer-events-none">₱</span>
+                      <input
+                        type="number"
+                        value={variation.price ?? 0}
+                        onFocus={(e) => { if (Number(e.target.value) === 0) e.target.value = ''; }}
+                        onBlur={(e) => { if (e.target.value === '') updateVariation(index, 'price', 0); }}
+                        onChange={(e) => updateVariation(index, 'price', e.target.value === '' ? 0 : Number(e.target.value))}
+                        className="w-24 pl-8 pr-3 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200 text-sm"
+                        placeholder="0"
+                        min="0"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeVariation(index)}
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 flex-shrink-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <p className="text-sm">No variations yet. Click "Add" to create one.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Section 5: Add-ons */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <span className="text-xl">➕</span> Add-ons
+              </h2>
+              <button
+                onClick={addAddOn}
+                className="inline-flex items-center space-x-1.5 px-3 py-2 bg-delivery-primary/10 text-delivery-primary rounded-lg hover:bg-delivery-primary/20 transition-colors duration-200 text-sm font-medium"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add</span>
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">Extra options customers can add (e.g., Extra Cheese, Spicy Sauce).</p>
+
+            {formData.addOns && formData.addOns.length > 0 ? (
+              <div className="space-y-3">
+                {formData.addOns.map((addOn, index) => (
+                  <div key={addOn.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <input
+                      type="text"
+                      value={addOn.name}
+                      onChange={(e) => updateAddOn(index, 'name', e.target.value)}
+                      className="flex-1 px-3 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200 text-sm"
+                      placeholder="e.g., Extra Cheese"
+                    />
+                    <select
+                      value={addOn.category}
+                      onChange={(e) => updateAddOn(index, 'category', e.target.value)}
+                      className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200 text-sm flex-shrink-0"
+                    >
+                      {addOnCategories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                    <div className="relative flex-shrink-0">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm pointer-events-none">₱</span>
+                      <input
+                        type="number"
+                        value={addOn.price ?? 0}
+                        onFocus={(e) => { if (Number(e.target.value) === 0) e.target.value = ''; }}
+                        onBlur={(e) => { if (e.target.value === '') updateAddOn(index, 'price', 0); }}
+                        onChange={(e) => updateAddOn(index, 'price', e.target.value === '' ? 0 : Number(e.target.value))}
+                        className="w-24 pl-8 pr-3 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200 text-sm"
+                        placeholder="0"
+                        min="0"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAddOn(index)}
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 flex-shrink-0 self-end sm:self-auto"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <p className="text-sm">No add-ons yet. Click "Add" to create one.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Floating Save Bar (Mobile) */}
+          <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+            <button
+              onClick={handleSaveItem}
+              disabled={isSaving}
+              className="w-full py-3.5 bg-green-600 text-white rounded-xl font-semibold text-base shadow-sm hover:bg-green-700 transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isSaving ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-5 w-5" />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </div>
+          {/* Bottom padding for mobile floating bar */}
+          <div className="h-20 sm:hidden"></div>
+
         </div>
       </div>
     );
   }
-
   // List View
+  const filteredItems = menuItems.filter(item => {
+    const matchesSearch = searchQuery === '' || 
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = filterCategory === '' || item.category === filterCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Top Bar */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between h-16 gap-4">
+            <div className="flex items-center space-x-4 min-w-0">
               <button
                 onClick={onBack}
-                className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors duration-200"
+                className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-gray-800 text-white text-sm font-medium shadow hover:bg-gray-700 transition-colors duration-200 flex-shrink-0"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4" />
                 <span>Restaurants</span>
               </button>
-              <h1 className="text-2xl font-playfair font-semibold text-black">
-                Menu Items - {restaurantName}
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+                📋 Menu Items — {restaurantName}
               </h1>
             </div>
             <button
               onClick={handleAddItem}
-              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200"
+              className="inline-flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition-colors duration-200 text-sm font-semibold shadow-sm flex-shrink-0"
             >
               <Plus className="h-4 w-4" />
-              <span>Add Menu Item</span>
+              <span>Add Item</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {menuItems.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No menu items yet</h3>
-            <p className="text-gray-600 mb-4">Start by adding your first menu item</p>
-            <button
-              onClick={handleAddItem}
-              className="inline-flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Menu Item</span>
-            </button>
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 space-y-5">
+
+        {/* Search & Filter Bar */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-gray-800/10 focus:border-gray-400 transition-all duration-200"
+                placeholder="Search items by name or description..."
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="relative flex-shrink-0">
+              <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="pl-10 pr-8 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-gray-800/10 focus:border-gray-400 transition-all duration-200 appearance-none min-w-[160px]"
+              >
+                <option value="">All Categories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Name</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Category</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Price</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Variations</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Add-ons</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Status</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {menuItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="font-medium text-gray-900">{item.name}</div>
-                          <div className="text-sm text-gray-500 truncate max-w-xs">{item.description}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {categories.find(cat => cat.id === item.category)?.name}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {item.isOnDiscount && item.discountPrice ? (
-                          <>
-                            <span className="text-red-600 font-semibold">₱{item.discountPrice}</span>
-                            <span className="text-gray-500 line-through text-xs ml-1">₱{item.basePrice}</span>
-                          </>
-                        ) : (
-                          `₱${item.basePrice}`
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {item.variations?.length || 0} variations
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {item.addOns?.length || 0} add-ons
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col space-y-1">
-                          {item.popular && (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-600 text-white">
-                              Popular
-                            </span>
+          {/* Results summary */}
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              Showing <span className="font-semibold text-gray-700">{filteredItems.length}</span> of{' '}
+              <span className="font-semibold text-gray-700">{menuItems.length}</span> items
+              {searchQuery && <span> matching "<span className="font-medium">{searchQuery}</span>"</span>}
+              {filterCategory && <span> in <span className="font-medium">{categories.find(c => c.id === filterCategory)?.name}</span></span>}
+            </p>
+            {(searchQuery || filterCategory) && (
+              <button
+                onClick={() => { setSearchQuery(''); setFilterCategory(''); }}
+                className="text-xs text-gray-500 hover:text-gray-700 underline transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Table Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {filteredItems.length === 0 ? (
+            <div className="text-center py-16 px-4">
+              {menuItems.length === 0 ? (
+                <>
+                  <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">No menu items yet</h3>
+                  <p className="text-sm text-gray-500 mb-4">Start by adding your first menu item</p>
+                  <button
+                    onClick={handleAddItem}
+                    className="inline-flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition-colors duration-200 text-sm font-semibold"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Menu Item</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">No items found</h3>
+                  <p className="text-sm text-gray-500">Try adjusting your search or filter.</p>
+                  <button
+                    onClick={() => { setSearchQuery(''); setFilterCategory(''); }}
+                    className="mt-4 text-sm text-gray-600 underline hover:text-gray-800 transition-colors"
+                  >
+                    Clear all filters
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50/70 border-b border-gray-200">
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Item</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Price</th>
+                      <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Vars</th>
+                      <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Add-ons</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredItems.map((item, idx) => (
+                      <tr key={item.id} className={`group transition-colors duration-100 ${
+                        idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                      } hover:bg-gray-100/60`}>
+                        <td className="px-5 py-3.5">
+                          <div className="min-w-0">
+                            <div className="font-medium text-gray-900 text-sm">{item.name}</div>
+                            <div className="text-xs text-gray-400 truncate max-w-[200px] mt-0.5">{item.description}</div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-gray-100 text-xs font-medium text-gray-700">
+                            {categories.find(cat => cat.id === item.category)?.name || '—'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {item.isOnDiscount && item.discountPrice ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-red-600">₱{item.discountPrice}</span>
+                              <span className="text-xs text-gray-400 line-through">₱{item.basePrice}</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm font-semibold text-gray-900">₱{item.basePrice}</span>
                           )}
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            item.available 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          <span className="text-sm text-gray-600">{item.variations?.length || 0}</span>
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          <span className="text-sm text-gray-600">{item.addOns?.length || 0}</span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex flex-col gap-1">
+                            {item.popular && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700">
+                                ⭐ Popular
+                              </span>
+                            )}
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${
+                              item.available 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-red-100 text-red-600'
+                            }`}>
+                              {item.available ? '✅ Available' : '❌ Unavailable'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center justify-end space-x-1 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
+                            <button
+                              onClick={() => handleEditItem(item)}
+                              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                              title="Edit item"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteItem(item.id)}
+                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                              title="Delete item"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {filteredItems.map((item) => (
+                  <div key={item.id} className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-gray-900 text-sm truncate">{item.name}</h3>
+                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{item.description}</p>
+                          </div>
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <button
+                              onClick={() => handleEditItem(item)}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteItem(item.id)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-[10px] font-medium text-gray-600">
+                            {categories.find(cat => cat.id === item.category)?.name}
+                          </span>
+                          <span className="text-sm font-bold text-gray-900">
+                            {item.isOnDiscount && item.discountPrice ? (
+                              <><span className="text-red-600">₱{item.discountPrice}</span> <span className="text-gray-400 line-through text-xs font-normal">₱{item.basePrice}</span></>
+                            ) : (
+                              <>₱{item.basePrice}</>
+                            )}
+                          </span>
+                          {item.popular && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700">⭐</span>
+                          )}
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                            item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
                           }`}>
-                            {item.available ? 'Available' : 'Unavailable'}
+                            {item.available ? '✅' : '❌'}
                           </span>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleEditItem(item)}
-                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors duration-200"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
 
-            {/* Mobile Card View */}
-            <div className="md:hidden">
-              {menuItems.map((item) => (
-                <div key={item.id} className="p-4 border-b border-gray-200 last:border-b-0">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
-                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
-                    </div>
-                    <div className="flex items-center space-x-2 ml-2">
-                      <button
-                        onClick={() => handleEditItem(item)}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors duration-200"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                        <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-400">
+                          <span>{item.variations?.length || 0} vars</span>
+                          <span>{item.addOns?.length || 0} add-ons</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Category:</span>
-                      <span className="ml-1 text-gray-900">
-                        {categories.find(cat => cat.id === item.category)?.name}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Price:</span>
-                      <span className="ml-1 font-medium text-gray-900">
-                        {item.isOnDiscount && item.discountPrice ? (
-                          <>
-                            <span className="text-red-600">₱{item.discountPrice}</span>
-                            <span className="text-gray-500 line-through text-xs ml-1">₱{item.basePrice}</span>
-                          </>
-                        ) : (
-                          `₱${item.basePrice}`
-                        )}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Variations:</span>
-                      <span className="ml-1 text-gray-900">{item.variations?.length || 0}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Add-ons:</span>
-                      <span className="ml-1 text-gray-900">{item.addOns?.length || 0}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 mt-3">
-                    {item.popular && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-600 text-white">
-                        Popular
-                      </span>
-                    )}
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      item.available 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {item.available ? 'Available' : 'Unavailable'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

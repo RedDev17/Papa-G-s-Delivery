@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ArrowLeft, MapPin, Plus, Trash2, Navigation, Package } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useGoogleMaps } from '../hooks/useGoogleMaps';
+import { useOpenStreetMap } from '../hooks/useOpenStreetMap';
 import AddressAutocomplete from './AddressAutocomplete';
 import Header from './Header';
 
@@ -16,10 +17,12 @@ interface PadalaBookingProps {
 interface PabiliItem {
   name: string;
   qty: string;
+  price: string;
 }
 
 const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala', mode = 'full' }) => {
-  const { calculateDistanceBetweenAddresses, calculateDeliveryFee, restaurantLocation } = useGoogleMaps();
+  const { calculateDistance, calculateDeliveryFee, restaurantLocation } = useGoogleMaps();
+  const { reverseGeocode } = useOpenStreetMap();
   const [formData, setFormData] = useState({
     customer_name: '',
     contact_number: '',
@@ -38,53 +41,88 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
   });
   
   // State for Pabili items list
-  const [pabiliItems, setPabiliItems] = useState<PabiliItem[]>([{ name: '', qty: '' }]);
+  const [pabiliItems, setPabiliItems] = useState<PabiliItem[]>([{ name: '', qty: '', price: '' }]);
+  const [weightUnit, setWeightUnit] = useState('kg');
 
   const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null);
-
-
 
   const [distance, setDistance] = useState<number | null>(null);
   const [hubDistance, setHubDistance] = useState<number | null>(null);
   const [deliveryFee, setDeliveryFee] = useState<number>(60);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
 
-  const [debouncedPickupAddress, setDebouncedPickupAddress] = useState('');
-  const [debouncedDeliveryAddress, setDebouncedDeliveryAddress] = useState('');
+  const serviceType = title === 'Pabili' ? 'pabili' : 'padala';
 
-  // Debounce address changes
+  // Initialize default fee on mount using service-specific settings
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedPickupAddress(formData.pickup_address);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [formData.pickup_address]);
+    setDeliveryFee(calculateDeliveryFee(null, serviceType));
+  }, [calculateDeliveryFee, serviceType]);
 
+  // Core: Recalculate distance & fee when coordinates change (exact coordinates from autocomplete/GPS/map drag)
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedDeliveryAddress(formData.delivery_address);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [formData.delivery_address]);
-
-  // Trigger calculation when debounced addresses change
-  React.useEffect(() => {
-    if (debouncedPickupAddress || debouncedDeliveryAddress) {
-      calculateFee();
+    if (!deliveryCoords) {
+      return;
     }
+
+    const recalculate = async () => {
+      setIsCalculating(true);
+      try {
+        // Determine the origin for fee calculation
+        // Use pickup coords if available, otherwise use the delivery center (hub)
+        const origin = pickupCoords || (restaurantLocation ? { lat: restaurantLocation.lat, lng: restaurantLocation.lng } : undefined);
+
+        // Calculate distance from origin to delivery using OSRM (accurate road distance)
+        const result = await calculateDistance(
+          `${deliveryCoords.lat},${deliveryCoords.lng}`,
+          origin
+        );
+
+        if (result && !isNaN(result.distance)) {
+          setDistance(result.distance);
+          const fee = calculateDeliveryFee(result.distance, serviceType);
+          setDeliveryFee(fee);
+        } else {
+          setDistance(null);
+          setDeliveryFee(calculateDeliveryFee(null, serviceType));
+        }
+
+        // Calculate Hub -> Pickup distance (informational only)
+        if (pickupCoords && restaurantLocation) {
+          const hubResult = await calculateDistance(
+            `${pickupCoords.lat},${pickupCoords.lng}`,
+            { lat: restaurantLocation.lat, lng: restaurantLocation.lng }
+          );
+          if (hubResult) {
+            setHubDistance(hubResult.distance);
+          } else {
+            setHubDistance(null);
+          }
+        } else {
+          setHubDistance(null);
+        }
+      } catch (error) {
+        console.error('Error calculating fee:', error);
+        setDistance(null);
+        setDeliveryFee(calculateDeliveryFee(null, serviceType));
+      } finally {
+        setIsCalculating(false);
+      }
+    };
+
+    recalculate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedPickupAddress, debouncedDeliveryAddress]);
-
-
-
-
-
-
+  }, [pickupCoords?.lat, pickupCoords?.lng, deliveryCoords?.lat, deliveryCoords?.lng]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'contact_number' || name === 'receiver_contact') {
+      const digits = value.replace(/\D/g, '').slice(0, 11);
+      setFormData(prev => ({ ...prev, [name]: digits }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   // Pabili Item Handlers
@@ -95,7 +133,7 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
   };
 
   const addPabiliItem = () => {
-    setPabiliItems([...pabiliItems, { name: '', qty: '' }]);
+    setPabiliItems([...pabiliItems, { name: '', qty: '', price: '' }]);
   };
 
   const removePabiliItem = (index: number) => {
@@ -106,71 +144,23 @@ const PadalaBooking: React.FC<PadalaBookingProps> = ({ onBack, title = 'Padala',
     }
   };
 
-  const calculateFee = async () => {
-    if (!formData.delivery_address.trim()) {
-      return;
+  // Handle delivery marker drag on map
+  const handleDeliveryMarkerDrag = useCallback(async (lat: number, lng: number) => {
+    setDeliveryCoords({ lat, lng });
+    const addr = await reverseGeocode(lat, lng);
+    if (addr) {
+      setFormData(prev => ({ ...prev, delivery_address: addr }));
     }
+  }, [reverseGeocode]);
 
-    // For Pabili, we use the pickup address (Store Location) if provided
-    // For Padala, we use the pickup address
-    const pickup = formData.pickup_address || (restaurantLocation?.address || 'Floridablanca, Pampanga');
-
-
-
-    try {
-      // We only charge for the distance between Pickup/Store and Customer
-      // The Hub -> Pickup distance is internal logistics and shouldn't be charged to the customer
-      
-      // Calculate Pickup/Store -> Customer Delivery
-      const result = await calculateDistanceBetweenAddresses(pickup, formData.delivery_address);
-      
-      // Calculate Hub -> Pickup (for informational purposes)
-      if (restaurantLocation && formData.pickup_address.trim()) {
-        const hubResult = await calculateDistanceBetweenAddresses(restaurantLocation.address, pickup);
-        if (hubResult) setHubDistance(hubResult.distance);
-      } else {
-        setHubDistance(null);
-      }
-
-      if (result && !isNaN(result.distance)) {
-        setDistance(result.distance);
-
-        // Calculate fee using service-specific settings
-        const serviceType = title === 'Pabili' ? 'pabili' : 'padala';
-        const fee = calculateDeliveryFee(result.distance, serviceType);
-        setDeliveryFee(fee);
-
-        // Update map coordinates if available
-        // Only show pin if the address input is not empty
-        if (result.pickupCoordinates && formData.pickup_address.trim()) {
-            setPickupCoords(result.pickupCoordinates);
-        } else if (!formData.pickup_address.trim()) {
-            // Clear pin if input is empty
-            setPickupCoords(null);
-        }
-
-        if (result.dropoffCoordinates && formData.delivery_address.trim()) {
-            setDeliveryCoords(result.dropoffCoordinates);
-        } else if (!formData.delivery_address.trim()) {
-             // Clear pin if input is empty
-            setDeliveryCoords(null);
-        }
-
-      } else {
-        // Use service-specific settings for fallback fee
-        const serviceType = title === 'Pabili' ? 'pabili' : 'padala';
-        setDeliveryFee(calculateDeliveryFee(null, serviceType));
-        // Do not clear coords here, as we might keep old valid coords if calculation fails momentarily
-        // or we could clear them if that's safer. Let's rely on the input check above.
-      }
-    } catch (error) {
-      console.error('Error calculating fee:', error);
-      setDistance(null);
-      setDeliveryFee(60);
-    } finally {
-      // setIsCalculating(false);
+  // Handle pickup/store marker drag on map
+  const handlePickupMarkerDrag = useCallback(async (lat: number, lng: number) => {
+    setPickupCoords({ lat, lng });
+    const addr = await reverseGeocode(lat, lng);
+    if (addr) {
+      setFormData(prev => ({ ...prev, pickup_address: addr }));
     }
-  };
+  }, [reverseGeocode]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -257,7 +247,7 @@ ${formData.pickup_address}${pickupMapLink ? `\n📌 Pin: ${pickupMapLink}` : ''}
 ${formData.delivery_address}${deliveryMapLink ? `\n📌 Pin: ${deliveryMapLink}` : ''}
 
 📦 ITEMS TO BUY:
-${pabiliItems.filter(i => i.name).map(i => `• ${i.name} (Qty: ${i.qty})`).join('\n')}
+${pabiliItems.filter(i => i.name).map(i => `• ${i.name} (Qty: ${i.qty})${i.price ? ` — ₱${i.price}` : ''}`).join('\n')}
 
 💰 TOTAL: ₱${deliveryFee.toFixed(2)} (Delivery Fee)
 ${distance ? `📏 Distance: ${distance} km` : ''}
@@ -284,7 +274,7 @@ ${formData.delivery_address}${deliveryMapLink ? `\n📌 Pin: ${deliveryMapLink}`
 
 📦 ITEM DETAILS:
 ${formData.item_description}
-${mode === 'full' && formData.item_weight ? `Weight: ${formData.item_weight}\n` : ''}${mode === 'full' && formData.item_value ? `Value: ₱${formData.item_value}\n` : ''}
+${mode === 'full' && formData.item_weight ? `Weight: ${formData.item_weight} ${weightUnit}\n` : ''}${mode === 'full' && formData.item_value ? `Value: ₱${formData.item_value}\n` : ''}
 ${mode === 'full' ? `📅 Date: ${formData.preferred_date || 'Any'}\n⏰ Time: ${formData.preferred_time}\n` : ''}
 💰 TOTAL: ₱${deliveryFee.toFixed(2)} (Delivery Fee)
 ${distance ? `📏 Distance: ${distance} km` : ''}
@@ -318,8 +308,10 @@ Please confirm this Padala request. Thank you! 🛵`;
       });
       setPabiliItems([{ name: '', qty: '' }]);
       setDistance(null);
+      setPickupCoords(null);
+      setDeliveryCoords(null);
+      setHubDistance(null);
       // Use service-specific base fee when resetting
-      const serviceType = title === 'Pabili' ? 'pabili' : 'padala';
       setDeliveryFee(calculateDeliveryFee(null, serviceType));
     } catch (error) {
       console.error('Error submitting booking:', error);
@@ -383,14 +375,27 @@ Please confirm this Padala request. Thank you! 🛵`;
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {title === 'Pabili' ? 'Phone No. *' : 'Sender Contact No. *'}
                 </label>
-                <input
-                  type="tel"
-                  name="contact_number"
-                  value={formData.contact_number}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
-                />
+                <div className="relative flex">
+                  <span className="inline-flex items-center px-3.5 bg-gray-100 border border-r-0 border-gray-200 rounded-l-xl text-sm font-medium text-gray-600 select-none">+63</span>
+                  <input
+                    type="tel"
+                    name="contact_number"
+                    value={formData.contact_number}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-r-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                    placeholder="09XX XXX XXXX"
+                    maxLength={11}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                  />
+                </div>
+                {formData.contact_number && formData.contact_number.length < 11 && (
+                  <p className="text-xs text-amber-600 mt-1">{11 - formData.contact_number.length} more digit{11 - formData.contact_number.length !== 1 ? 's' : ''} needed</p>
+                )}
+                {formData.contact_number && formData.contact_number.length === 11 && !formData.contact_number.startsWith('09') && (
+                  <p className="text-xs text-red-500 mt-1">Must start with 09</p>
+                )}
               </div>
             </div>
           </div>
@@ -415,13 +420,23 @@ Please confirm this Padala request. Thank you! 🛵`;
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {title === 'Pabili' ? 'Phone No.' : 'Receiver Contact No.'}
                 </label>
-                <input
-                  type="tel"
-                  name="receiver_contact"
-                  value={formData.receiver_contact}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
-                />
+                <div className="relative flex">
+                  <span className="inline-flex items-center px-3.5 bg-gray-100 border border-r-0 border-gray-200 rounded-l-xl text-sm font-medium text-gray-600 select-none">+63</span>
+                  <input
+                    type="tel"
+                    name="receiver_contact"
+                    value={formData.receiver_contact}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-r-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                    placeholder="09XX XXX XXXX"
+                    maxLength={11}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                  />
+                </div>
+                {formData.receiver_contact && formData.receiver_contact.length > 0 && formData.receiver_contact.length < 11 && (
+                  <p className="text-xs text-amber-600 mt-1">{11 - formData.receiver_contact.length} more digit{11 - formData.receiver_contact.length !== 1 ? 's' : ''} needed</p>
+                )}
               </div>
             </div>
           </div>
@@ -511,6 +526,8 @@ Please confirm this Padala request. Thank you! 🛵`;
                       customerLocation={deliveryCoords || null} // Receiver Location
                       distance={distance}
                       address={formData.delivery_address}
+                      onLocationSelect={handleDeliveryMarkerDrag}
+                      onRestaurantSelect={handlePickupMarkerDrag}
                       restaurantName={title === 'Pabili' ? 'Store Location' : 'Pickup Location'}
                       restaurantAddress={formData.pickup_address}
                       markerType={title === 'Pabili' ? 'store' : 'package'}
@@ -529,29 +546,43 @@ Please confirm this Padala request. Thank you! 🛵`;
                 // Pabili Item List
                 <div className="space-y-3">
                   <div className="grid grid-cols-12 gap-2 text-sm font-medium text-gray-700">
-                    <div className="col-span-8">Item</div>
-                    <div className="col-span-3">Qty</div>
+                    <div className="col-span-5">Item</div>
+                    <div className="col-span-2">Qty</div>
+                    <div className="col-span-4">Est. Price</div>
                     <div className="col-span-1"></div>
                   </div>
                   {pabiliItems.map((item, index) => (
                     <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-8">
+                      <div className="col-span-5">
                         <input
                           type="text"
                           value={item.name}
                           onChange={(e) => handlePabiliItemChange(index, 'name', e.target.value)}
                           placeholder="Item name"
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200 text-sm"
                         />
                       </div>
-                      <div className="col-span-3">
+                      <div className="col-span-2">
                         <input
                           type="text"
                           value={item.qty}
                           onChange={(e) => handlePabiliItemChange(index, 'qty', e.target.value)}
                           placeholder="Qty"
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200 text-sm"
                         />
+                      </div>
+                      <div className="col-span-4">
+                        <div className="relative flex">
+                          <span className="inline-flex items-center px-2.5 bg-gray-100 border border-r-0 border-gray-200 rounded-l-xl text-xs font-medium text-gray-600 select-none">₱</span>
+                          <input
+                            type="number"
+                            value={item.price}
+                            onChange={(e) => handlePabiliItemChange(index, 'price', e.target.value)}
+                            placeholder="0"
+                            min="0"
+                            className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-r-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200 text-sm"
+                          />
+                        </div>
                       </div>
                       <div className="col-span-1 flex justify-center">
                         {pabiliItems.length > 1 && (
@@ -594,27 +625,44 @@ Please confirm this Padala request. Thank you! 🛵`;
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Item Weight (optional)</label>
-                        <input
-                          type="text"
-                          name="item_weight"
-                          value={formData.item_weight}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
-                          placeholder="e.g., 1kg, 2kg, light"
-                        />
+                        <div className="relative flex">
+                          <input
+                            type="number"
+                            name="item_weight"
+                            value={formData.item_weight}
+                            onChange={handleInputChange}
+                            min="0"
+                            step="0.1"
+                            className="w-full px-4 py-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                            placeholder="0"
+                          />
+                          <select
+                            value={weightUnit}
+                            onChange={(e) => setWeightUnit(e.target.value)}
+                            className="px-3 py-3 bg-gray-100 border border-gray-200 rounded-r-xl text-sm font-medium text-gray-700 focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200 appearance-none cursor-pointer min-w-[70px] text-center"
+                          >
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="lbs">lbs</option>
+                            <option value="oz">oz</option>
+                          </select>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Item Value (optional)</label>
-                        <input
-                          type="number"
-                          name="item_value"
-                          value={formData.item_value}
-                          onChange={handleInputChange}
-                          min="0"
-                          step="0.01"
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
-                          placeholder="₱0.00"
-                        />
+                        <div className="relative flex">
+                          <span className="inline-flex items-center px-3.5 bg-gray-100 border border-r-0 border-gray-200 rounded-l-xl text-sm font-medium text-gray-600 select-none">₱</span>
+                          <input
+                            type="number"
+                            name="item_value"
+                            value={formData.item_value}
+                            onChange={handleInputChange}
+                            min="0"
+                            step="0.01"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-r-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                            placeholder="0.00"
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -720,7 +768,16 @@ Please confirm this Padala request. Thank you! 🛵`;
                     )}
                 </div>
               </span>
-              <span className="text-xl font-bold text-delivery-primary">₱{deliveryFee.toFixed(2)}</span>
+              <span className="text-xl font-bold text-delivery-primary">
+                {isCalculating ? (
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-gray-200 border-t-delivery-primary"></span>
+                    Calculating...
+                  </span>
+                ) : (
+                  <>₱{deliveryFee.toFixed(2)}</>
+                )}
+              </span>
             </div>
           </div>
 

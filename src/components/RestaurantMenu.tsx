@@ -108,6 +108,7 @@ const RestaurantMenu: React.FC<RestaurantMenuProps> = ({
                   discountActive: item.discountActive,
                   effectivePrice: item.effectivePrice,
                   isOnDiscount: item.isOnDiscount,
+                  variationGroupName: item.variationGroupName,
                 };
                 return (
                   <MenuItemCard

@@ -68,6 +68,7 @@ const RoutingMachine = ({ restaurantLocation, customerLocation, lineOptions }: R
             rc._line = null;
           }
           if (rc._alternatives && Array.isArray(rc._alternatives)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             rc._alternatives.forEach((alt: any) => {
               try { alt.removeFrom(map); } catch { /* already removed */ }
             });

@@ -51,6 +51,7 @@ export const useMenu = () => {
           discountActive: item.discount_active || false,
           effectivePrice,
           isOnDiscount: isDiscountActive,
+          variationGroupName: item.variation_group_name || undefined,
           variations: item.variations?.map(v => ({
             id: v.id,
             name: v.name,
@@ -91,7 +92,8 @@ export const useMenu = () => {
           discount_price: item.discountPrice || null,
           discount_start_date: item.discountStartDate || null,
           discount_end_date: item.discountEndDate || null,
-          discount_active: item.discountActive || false
+          discount_active: item.discountActive || false,
+          variation_group_name: item.variationGroupName && item.variationGroupName.trim() !== '' ? item.variationGroupName.trim() : null
         })
         .select()
         .single();
@@ -153,7 +155,8 @@ export const useMenu = () => {
           discount_price: updates.discountPrice || null,
           discount_start_date: updates.discountStartDate || null,
           discount_end_date: updates.discountEndDate || null,
-          discount_active: updates.discountActive
+          discount_active: updates.discountActive,
+          variation_group_name: updates.variationGroupName && updates.variationGroupName.trim() !== '' ? updates.variationGroupName.trim() : null
         })
         .eq('id', id);
 

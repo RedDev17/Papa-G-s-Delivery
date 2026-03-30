@@ -58,6 +58,7 @@ export const useRestaurantMenuAdmin = (restaurantId: string | null) => {
           discountActive: item.discount_active || false,
           effectivePrice,
           isOnDiscount: isDiscountActive,
+          variationGroupName: item.variation_group_name || undefined,
           variations: item.variations?.map((v: {id: string, name: string, price: number}) => ({
             id: v.id,
             name: v.name,
@@ -104,7 +105,8 @@ export const useRestaurantMenuAdmin = (restaurantId: string | null) => {
           discount_start_date: item.discountStartDate && item.discountStartDate.trim() !== '' ? item.discountStartDate : null,
           discount_end_date: item.discountEndDate && item.discountEndDate.trim() !== '' ? item.discountEndDate : null,
           discount_active: item.discountActive || false,
-          restaurant_id: restaurantId
+          restaurant_id: restaurantId,
+          variation_group_name: item.variationGroupName && item.variationGroupName.trim() !== '' ? item.variationGroupName.trim() : null
         })
         .select()
         .single();
@@ -189,6 +191,9 @@ export const useRestaurantMenuAdmin = (restaurantId: string | null) => {
         updateData.discount_end_date = updates.discountEndDate && updates.discountEndDate.trim() !== '' ? updates.discountEndDate : null;
       }
       if (updates.discountActive !== undefined) updateData.discount_active = updates.discountActive;
+      if (updates.variationGroupName !== undefined) {
+        updateData.variation_group_name = updates.variationGroupName && updates.variationGroupName.trim() !== '' ? updates.variationGroupName.trim() : null;
+      }
 
       // Update menu item
       const { error: itemError } = await supabase

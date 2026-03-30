@@ -57,6 +57,7 @@ export const useRestaurantMenu = (restaurantId: string) => {
           discountActive: item.discount_active || false,
           effectivePrice,
           isOnDiscount: isDiscountActive,
+          variationGroupName: item.variation_group_name || undefined,
           variations: item.variations?.map((v: {id: string, name: string, price: number}) => ({
             id: v.id,
             name: v.name,

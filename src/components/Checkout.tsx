@@ -13,9 +13,11 @@ interface CheckoutProps {
   cartItems: CartItem[];
   totalPrice: number;
   onBack: () => void;
+  clearCart: () => void;
+  onOrderPlaced: () => void;
 }
 
-const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) => {
+const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, clearCart, onOrderPlaced }) => {
   const { paymentMethods } = usePaymentMethods();
   const { restaurants } = useRestaurants();
   const { calculateDistance, calculateDeliveryFee, isWithinDeliveryArea, restaurantLocation: defaultRestaurantLocation, maxDeliveryRadius } = useGoogleMaps();
@@ -48,7 +50,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
   const [contactNumber, setContactNumber] = useState('');
   const [address, setAddress] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('gcash');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'cod'>('gcash');
   const [notes, setNotes] = useState('');
   // Per-restaurant delivery fee calculation
   const [restaurantFees, setRestaurantFees] = useState<Record<string, { distance: number | null; fee: number }>>({});
@@ -228,6 +230,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
     return totalPrice + totalDeliveryFee;
   }, [totalPrice, totalDeliveryFee]);
 
+  const isCOD = paymentMethod === 'cod';
   const selectedPaymentMethod = paymentMethods.find(method => method.id === paymentMethod);
 
   const handleProceedToPayment = () => {
@@ -289,8 +292,8 @@ ${deliveryFeeBreakdown}
 
 ⚠️ Notice: The price will be different at the store or restaurant.
 
-💳 Payment: ${selectedPaymentMethod?.name || paymentMethod}
-📸 Payment Screenshot: Please attach your payment receipt screenshot
+💳 Payment: ${isCOD ? 'Cash on Delivery (COD)' : (selectedPaymentMethod?.name || paymentMethod)}
+${isCOD ? '💵 Please prepare exact amount for the rider.' : '📸 Payment Screenshot: Please attach your payment receipt screenshot'}
 
 ${notes ? `📝 Notes: ${notes}` : ''}
 
@@ -301,6 +304,10 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
     const messengerUrl = `https://m.me/856261030909952?text=${encodedMessage}`;
     
     window.open(messengerUrl, '_blank');
+
+    // Clear cart and redirect to food page after sending to Messenger
+    clearCart();
+    onOrderPlaced();
   };
 
   const isDetailsValid = customerName && contactNumber && address && isWithinArea === true;
@@ -423,14 +430,29 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
 
               <div>
                 <label className="block text-sm font-medium text-black mb-2">Contact Number *</label>
-                <input
-                  type="tel"
-                  value={contactNumber}
-                  onChange={(e) => setContactNumber(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
-                  placeholder="09XX XXX XXXX"
-                  required
-                />
+                <div className="relative flex">
+                  <span className="inline-flex items-center px-3.5 bg-gray-100 border border-r-0 border-gray-200 rounded-l-xl text-sm font-medium text-gray-600 select-none">+63</span>
+                  <input
+                    type="tel"
+                    value={contactNumber}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                      setContactNumber(digits);
+                    }}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-r-xl focus:bg-white focus:ring-2 focus:ring-delivery-primary/20 focus:border-delivery-primary transition-all duration-200"
+                    placeholder="09XX XXX XXXX"
+                    maxLength={11}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    required
+                  />
+                </div>
+                {contactNumber && contactNumber.length < 11 && (
+                  <p className="text-xs text-amber-600 mt-1">{11 - contactNumber.length} more digit{11 - contactNumber.length !== 1 ? 's' : ''} needed</p>
+                )}
+                {contactNumber && contactNumber.length === 11 && !contactNumber.startsWith('09') && (
+                  <p className="text-xs text-red-500 mt-1">Must start with 09</p>
+                )}
               </div>
 
               {/* Delivery Address with Map */}
@@ -572,10 +594,23 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
                 <span className="font-medium">{method.name}</span>
               </button>
             ))}
+            {/* COD Option */}
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('cod')}
+              className={`p-4 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
+                paymentMethod === 'cod'
+                  ? 'border-delivery-primary bg-delivery-primary text-white'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-delivery-primary'
+              }`}
+            >
+              <span className="text-2xl">💵</span>
+              <span className="font-medium">Cash on Delivery (COD)</span>
+            </button>
           </div>
 
-          {/* Payment Details with QR Code */}
-          {selectedPaymentMethod && (
+          {/* Payment Details with QR Code (non-COD) */}
+          {selectedPaymentMethod && !isCOD && (
             <div className="bg-red-50 rounded-lg p-6 mb-6 border border-red-100">
               <h3 className="font-medium text-black mb-4">Payment Details</h3>
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -600,13 +635,29 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
             </div>
           )}
 
-          {/* Reference Number */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h4 className="font-medium text-black mb-2">📸 Payment Proof Required</h4>
-            <p className="text-sm text-gray-700">
-              After making your payment, please take a screenshot of your payment receipt and attach it when you send your order via Messenger. This helps us verify and process your order quickly.
-            </p>
-          </div>
+          {/* COD Details */}
+          {isCOD && (
+            <div className="bg-green-50 rounded-lg p-6 mb-6 border border-green-200">
+              <h3 className="font-medium text-black mb-2">💵 Cash on Delivery</h3>
+              <p className="text-sm text-gray-700 mb-2">
+                Pay with cash when your order arrives.
+              </p>
+              <p className="text-xl font-semibold text-black">Amount to prepare: ₱{finalTotalPrice.toFixed(2)}</p>
+              <p className="text-xs text-gray-500 mt-2">
+                Please prepare the exact amount if possible.
+              </p>
+            </div>
+          )}
+
+          {/* Payment Proof Notice (non-COD only) */}
+          {!isCOD && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h4 className="font-medium text-black mb-2">📸 Payment Proof Required</h4>
+              <p className="text-sm text-gray-700">
+                After making your payment, please take a screenshot of your payment receipt and attach it when you send your order via Messenger. This helps us verify and process your order quickly.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Order Summary */}
