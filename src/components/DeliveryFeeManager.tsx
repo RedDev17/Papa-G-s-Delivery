@@ -277,10 +277,13 @@ const DeliveryFeeManager: React.FC = () => {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-medium text-blue-800 mb-2">💡 How Delivery Fees Work</h4>
         <p className="text-sm text-blue-700">
-          <strong>Calculation:</strong> Base Fee + ((Distance - Base Distance) × Fee Per KM)
+          <strong>Below threshold:</strong> If distance is less than the Base Distance, only the Base Fee is charged.
         </p>
         <p className="text-sm text-blue-700 mt-1">
-          If the distance is within the base distance, only the base fee is charged. Extra fees apply for each full kilometer beyond the base distance.
+          <strong>At or above threshold:</strong> Base Fee + (Total full km × Fee Per KM).
+        </p>
+        <p className="text-sm text-blue-700 mt-1">
+          <strong>Example:</strong> Base Fee ₱60, Per KM ₱13, Base Distance 1 km → At 0.9 km = ₱60. At 2.4 km = ₱60 + (2 × ₱13) = ₱86.
         </p>
       </div>
     </div>

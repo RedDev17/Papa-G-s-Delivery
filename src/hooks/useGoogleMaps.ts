@@ -462,6 +462,12 @@ export const useGoogleMaps = () => {
 
   // Calculate delivery fee for specific service type
   // Dynamic delivery fee calculation based on service-specific settings
+  //
+  // Logic:
+  //   - If distance < baseDistance (e.g. 0.9 km when threshold = 1 km) → base fee only
+  //   - If distance >= baseDistance (e.g. 1 km+) → base fee + (floor(distance) × perKmFee)
+  //     The per-km charge applies to every full km of the TOTAL distance once the
+  //     threshold is reached.
   const calculateDeliveryFee = useCallback((distance: number | null, serviceType: 'food' | 'padala' | 'pabili' = 'food'): number => {
     const settings = deliverySettings[serviceType];
     
@@ -469,11 +475,13 @@ export const useGoogleMaps = () => {
       return settings.baseFee; // Base fee if distance cannot be calculated
     }
 
-    // Calculate total: base fee + ((distance - baseDistance) * per km fee)
-    // If distance is within base distance, only base fee applies
-    // Only charge for every FULL kilometer added (step pricing)
-    const chargeableDistance = Math.max(0, distance - settings.baseDistance);
-    const chargeableFullKm = Math.floor(chargeableDistance);
+    // Below the base-distance threshold → only the base fee
+    if (distance < settings.baseDistance) {
+      return settings.baseFee;
+    }
+
+    // At or above the threshold → base fee + per-km for every full km of total distance
+    const chargeableFullKm = Math.floor(distance);
     return settings.baseFee + (chargeableFullKm * settings.perKmFee);
   }, [deliverySettings]);
 

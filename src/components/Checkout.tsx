@@ -50,7 +50,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, clea
   const [contactNumber, setContactNumber] = useState('');
   const [address, setAddress] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'cod'>('gcash');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'cod' | ''>('');
   const [notes, setNotes] = useState('');
   // Per-restaurant delivery fee calculation
   const [restaurantFees, setRestaurantFees] = useState<Record<string, { distance: number | null; fee: number }>>({});
@@ -85,12 +85,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, clea
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
-  // Set default payment method when payment methods are loaded
-  React.useEffect(() => {
-    if (paymentMethods.length > 0 && !paymentMethod) {
-      setPaymentMethod(paymentMethods[0].id as PaymentMethod);
-    }
-  }, [paymentMethods, paymentMethod]);
+
 
 
 
@@ -231,6 +226,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, clea
   }, [totalPrice, totalDeliveryFee]);
 
   const isCOD = paymentMethod === 'cod';
+  const isPaymentSelected = paymentMethod !== '';
   const selectedPaymentMethod = paymentMethods.find(method => method.id === paymentMethod);
 
   const handleProceedToPayment = () => {
@@ -745,15 +741,35 @@ Please confirm this order to proceed. Thank you for choosing Papa G's Delivery! 
             </div>
           </div>
 
+          {!isPaymentSelected && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+              <span className="text-lg">⚠️</span>
+              <p className="text-sm text-amber-800 font-medium">
+                Please select a payment method above to continue.
+              </p>
+            </div>
+          )}
+
           <button
             onClick={handlePlaceOrder}
-            className="w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform bg-delivery-primary text-white hover:bg-delivery-dark hover:-translate-y-1 shadow-md hover:shadow-xl"
+            disabled={!isPaymentSelected}
+            className={`w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform ${
+              isPaymentSelected
+                ? 'bg-delivery-primary text-white hover:bg-delivery-dark hover:-translate-y-1 shadow-md hover:shadow-xl'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
           >
             Place Order via Messenger
           </button>
           
           <p className="text-xs text-gray-500 text-center mt-3">
-            You'll be redirected to Facebook Messenger to confirm your order. Don't forget to attach your payment screenshot!
+            {isPaymentSelected
+              ? (isCOD
+                  ? "You'll be redirected to Facebook Messenger to confirm your order."
+                  : "You'll be redirected to Facebook Messenger to confirm your order. Don't forget to attach your payment screenshot!"
+                )
+              : 'Select a payment method to enable order placement.'
+            }
           </p>
         </div>
         </div>
